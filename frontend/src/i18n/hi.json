@@ -1,0 +1,112 @@
+{
+  "nav": {
+    "dashboard": "डैशबोर्ड",
+    "orders": "ऑर्डर",
+    "analytics": "विश्लेषण",
+    "upload": "डेटा अपलोड",
+    "settings": "सेटिंग्स",
+    "logout": "लॉगआउट"
+  },
+  "landing": {
+    "hero_title": "ZeroReturn",
+    "hero_tagline": "शिपिंग से पहले रिटर्न का अनुमान लगाएं",
+    "hero_sub": "AI-संचालित इंटेलिजेंस जो लाखों की बचत करती है",
+    "hero_counter": "आज ₹2,34,18,000 बचाए गए",
+    "cta_demo": "डेमो आज़माएं",
+    "cta_dashboard": "डैशबोर्ड देखें",
+    "features_title": "रिटर्न रोकने के लिए सब कुछ",
+    "how_it_works": "यह कैसे काम करता है",
+    "step1_title": "डेटा कनेक्ट करें",
+    "step1_desc": "CSV, Excel अपलोड करें या API से स्टोर कनेक्ट करें",
+    "step2_title": "AI पैटर्न विश्लेषण करता है",
+    "step2_desc": "ML मॉडल तुरंत लिस्टिंग, इमेज और रिव्यू स्कैन करता है",
+    "step3_title": "पूर्वानुमान और समाधान पाएं",
+    "step3_desc": "जोखिम स्कोर और AI सुझाव प्राप्त करें",
+    "stats_orders": "विश्लेषित ऑर्डर",
+    "stats_sellers": "उपयोगकर्ता विक्रेता",
+    "stats_revenue": "बचाया गया राजस्व",
+    "stats_accuracy": "पूर्वानुमान सटीकता"
+  },
+  "dashboard": {
+    "title": "डैशबोर्ड",
+    "total_orders": "कुल ऑर्डर",
+    "return_rate": "रिटर्न दर",
+    "revenue_at_risk": "जोखिम में राजस्व",
+    "returns_prevented": "रोके गए रिटर्न",
+    "risk_heatmap": "श्रेणी जोखिम हीटमैप",
+    "return_trends": "रिटर्न ट्रेंड (पिछले 30 दिन)",
+    "top_risky_orders": "शीर्ष जोखिम ऑर्डर",
+    "ai_insight": "AI अंतर्दृष्टि",
+    "anomaly_title": "⚠️ असामान्य गतिविधि",
+    "fix_now": "अभी ठीक करें",
+    "view_all": "सभी देखें",
+    "investigate": "जांच करें",
+    "dismiss": "बंद करें"
+  },
+  "orders": {
+    "title": "ऑर्डर विश्लेषण",
+    "risk_score": "जोखिम स्कोर",
+    "category": "श्रेणी",
+    "price": "मूल्य",
+    "order_date": "ऑर्डर तिथि",
+    "status": "स्थिति",
+    "action": "कार्रवाई",
+    "search": "ऑर्डर खोजें...",
+    "filter_risk": "जोखिम के अनुसार फ़िल्टर",
+    "all_risk": "सभी जोखिम स्तर",
+    "tab_description": "विवरण विश्लेषण",
+    "tab_image": "छवि गुणवत्ता",
+    "tab_sentiment": "रिव्यू भावना",
+    "tab_ai": "AI सुझाव",
+    "apply_fix": "सुधार लागू करें",
+    "estimated_reduction": "अनुमानित रिटर्न कमी"
+  },
+  "analytics": {
+    "title": "विश्लेषण और रिपोर्ट",
+    "compare_mode": "अवधि तुलना",
+    "whatif_title": "क्या-अगर सिमुलेटर",
+    "whatif_desc": "सुधार का रिटर्न दर पर प्रभाव अनुकरण करें",
+    "generate_report": "PDF रिपोर्ट बनाएं",
+    "date_range": "तिथि सीमा",
+    "export_chart": "चार्ट निर्यात",
+    "ai_insight_prefix": "AI अंतर्दृष्टि:"
+  },
+  "upload": {
+    "title": "अपना डेटा अपलोड करें",
+    "drag_drop": "CSV, Excel या JSON फ़ाइल यहाँ खींचें और छोड़ें",
+    "or_click": "या ब्राउज़ करने के लिए क्लिक करें",
+    "supported": "समर्थित: CSV, XLSX, JSON",
+    "processing": "डेटा प्रोसेस हो रहा है...",
+    "success": "विश्लेषण पूर्ण!",
+    "map_columns": "अपने कॉलम मैप करें"
+  },
+  "settings": {
+    "title": "सेटिंग्स",
+    "profile": "प्रोफ़ाइल",
+    "theme": "थीम",
+    "language": "भाषा",
+    "notifications": "सूचनाएं",
+    "api_keys": "API कुंजी",
+    "export": "डेटा निर्यात",
+    "save": "परिवर्तन सहेजें"
+  },
+  "chatbot": {
+    "title": "ZeroReturn AI",
+    "placeholder": "अपने रिटर्न के बारे में कुछ भी पूछें...",
+    "greeting": "नमस्ते! मैं आपका AI रिटर्न विश्लेषक हूं। डेटा, ट्रेंड या रिटर्न कम करने के बारे में पूछें।",
+    "thinking": "विश्लेषण कर रहा है..."
+  },
+  "common": {
+    "loading": "लोड हो रहा है...",
+    "error": "कुछ गलत हो गया",
+    "retry": "पुनः प्रयास करें",
+    "save": "सहेजें",
+    "cancel": "रद्द करें",
+    "close": "बंद करें",
+    "back": "वापस",
+    "next": "अगला",
+    "view_details": "विवरण देखें",
+    "currency": "₹",
+    "percent": "%"
+  }
+}

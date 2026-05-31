@@ -1,0 +1,112 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "orders": "Orders",
+    "analytics": "Analytics",
+    "upload": "Upload Data",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "landing": {
+    "hero_title": "ZeroReturn",
+    "hero_tagline": "Predict Returns Before They Happen",
+    "hero_sub": "AI-powered intelligence that saves lakhs in losses",
+    "hero_counter": "₹2,34,18,000 saved today",
+    "cta_demo": "Try Demo",
+    "cta_dashboard": "View Dashboard",
+    "features_title": "Everything You Need to Stop Returns",
+    "how_it_works": "How It Works",
+    "step1_title": "Connect Your Data",
+    "step1_desc": "Upload CSV, Excel or connect your store via API",
+    "step2_title": "AI Analyzes Patterns",
+    "step2_desc": "ML models scan listings, images, and reviews instantly",
+    "step3_title": "Get Predictions & Fixes",
+    "step3_desc": "Receive risk scores and actionable AI suggestions",
+    "stats_orders": "Orders Analyzed",
+    "stats_sellers": "Sellers Using ZeroReturn",
+    "stats_revenue": "Revenue Saved",
+    "stats_accuracy": "Prediction Accuracy"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "total_orders": "Total Orders",
+    "return_rate": "Return Rate",
+    "revenue_at_risk": "Revenue at Risk",
+    "returns_prevented": "Returns Prevented",
+    "risk_heatmap": "Category Risk Heatmap",
+    "return_trends": "Return Trends (Last 30 Days)",
+    "top_risky_orders": "Top Risky Orders",
+    "ai_insight": "AI Insight",
+    "anomaly_title": "⚠️ Anomaly Detected",
+    "fix_now": "Fix Now",
+    "view_all": "View All",
+    "investigate": "Investigate",
+    "dismiss": "Dismiss"
+  },
+  "orders": {
+    "title": "Order Analysis",
+    "risk_score": "Risk Score",
+    "category": "Category",
+    "price": "Price",
+    "order_date": "Order Date",
+    "status": "Status",
+    "action": "Action",
+    "search": "Search orders...",
+    "filter_risk": "Filter by Risk",
+    "all_risk": "All Risk Levels",
+    "tab_description": "Description Analysis",
+    "tab_image": "Image Quality",
+    "tab_sentiment": "Review Sentiment",
+    "tab_ai": "AI Fix Suggestions",
+    "apply_fix": "Apply Fix",
+    "estimated_reduction": "Estimated Return Reduction"
+  },
+  "analytics": {
+    "title": "Analytics & Reports",
+    "compare_mode": "Compare Periods",
+    "whatif_title": "What-If Simulator",
+    "whatif_desc": "Simulate the impact of improvements on return rate",
+    "generate_report": "Generate PDF Report",
+    "date_range": "Date Range",
+    "export_chart": "Export Chart",
+    "ai_insight_prefix": "AI Insight:"
+  },
+  "upload": {
+    "title": "Upload Your Data",
+    "drag_drop": "Drag & drop your CSV, Excel or JSON file here",
+    "or_click": "or click to browse",
+    "supported": "Supported: CSV, XLSX, JSON",
+    "processing": "Processing your data...",
+    "success": "Analysis Complete!",
+    "map_columns": "Map Your Columns"
+  },
+  "settings": {
+    "title": "Settings",
+    "profile": "Profile",
+    "theme": "Theme",
+    "language": "Language",
+    "notifications": "Notifications",
+    "api_keys": "API Keys",
+    "export": "Export Data",
+    "save": "Save Changes"
+  },
+  "chatbot": {
+    "title": "ZeroReturn AI",
+    "placeholder": "Ask anything about your returns...",
+    "greeting": "Hi! I'm your AI return analyst. Ask me about your data, trends, or how to reduce returns.",
+    "thinking": "Analyzing..."
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Retry",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "view_details": "View Details",
+    "currency": "₹",
+    "percent": "%"
+  }
+}
