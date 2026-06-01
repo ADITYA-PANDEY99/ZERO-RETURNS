@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Bell, Search, User, Menu, TrendingDown } from 'lucide-react'
+import { Bell, Search, User, Menu, TrendingDown, Mic, MicOff } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ThemeSwitcher from '../features/ThemeSwitcher'
 import LanguageSwitcher from '../features/LanguageSwitcher'
 import { useDashboardStore } from '../../store/dashboardStore'
+import { useVoiceCommand } from '../../hooks/useVoiceCommand'
 
 export default function Navbar({ onMenuClick }) {
   const [searchOpen, setSearchOpen] = useState(false)
@@ -11,6 +12,7 @@ export default function Navbar({ onMenuClick }) {
   const [profileOpen, setProfileOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const { orders } = useDashboardStore()
+  const { isListening, toggleListening } = useVoiceCommand()
 
   const searchResults = searchQuery.length > 1
     ? orders.filter(o =>
@@ -108,6 +110,29 @@ export default function Navbar({ onMenuClick }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
         <LanguageSwitcher />
         <ThemeSwitcher />
+
+        {/* Voice Command Button */}
+        <button
+          className="btn btn-ghost btn-sm tooltip-container"
+          onClick={toggleListening}
+          id="voice-cmd-btn"
+          style={{ padding: '8px 10px', position: 'relative' }}
+          title={isListening ? 'Stop voice commands' : 'Start voice commands'}
+        >
+          {isListening ? (
+            <>
+              <Mic size={18} style={{ color: '#EF4444' }} />
+              <span style={{
+                position: 'absolute', top: 4, right: 4,
+                width: 8, height: 8, borderRadius: '50%',
+                background: '#EF4444', animation: 'pulseBadge 1s infinite',
+              }} />
+            </>
+          ) : (
+            <MicOff size={18} />
+          )}
+          <span className="tooltip">{isListening ? 'Listening... (click to stop)' : 'Voice Commands'}</span>
+        </button>
 
         {/* Notifications */}
         <div style={{ position: 'relative' }}>

@@ -26,6 +26,7 @@
     "react-grid-layout": "^2.2.3",
     "react-hot-toast": "^2.6.0",
     "react-i18next": "^17.0.8",
+    "react-resizable": "^4.0.1",
     "react-router-dom": "^7.16.0",
     "recharts": "^3.8.1",
     "tailwindcss": "^4.3.0",

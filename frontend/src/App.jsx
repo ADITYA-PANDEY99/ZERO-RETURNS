@@ -3,6 +3,8 @@ import { useEffect, Suspense, lazy } from 'react'
 import { Toaster } from 'react-hot-toast'
 import { useThemeStore } from './store/themeStore'
 import CursorTrail from './components/features/CursorTrail'
+import OnboardingTour from './components/features/OnboardingTour'
+import { useWebSocket } from './hooks/useWebSocket'
 import './i18n'
 
 // Lazy load pages for performance
@@ -57,17 +59,23 @@ function ProtectedRoute({ children }) {
 // Lazy Chatbot (to avoid loading on landing/auth pages)
 const Chatbot = lazy(() => import('./components/features/Chatbot'))
 
-function App() {
+// Inner app with hooks that need Router context
+function AppInner() {
   const { initTheme } = useThemeStore()
 
+  // Initialize theme on mount
   useEffect(() => {
     initTheme()
   }, [initTheme])
 
+  // Connect WebSocket for live updates (silently fails if backend offline)
+  useWebSocket()
+
   return (
-    <BrowserRouter>
+    <>
       <MeshBackground />
       <CursorTrail />
+      <OnboardingTour />
 
       <Suspense fallback={<PageLoader />}>
         <Routes>
@@ -121,6 +129,14 @@ function App() {
           },
         }}
       />
+    </>
+  )
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppInner />
     </BrowserRouter>
   )
 }
