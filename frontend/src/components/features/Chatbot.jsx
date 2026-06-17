@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MessageSquare, X, Send, Mic, MicOff, BarChart2 } from 'lucide-react'
+import { MessageSquare, X, Send, Mic, MicOff, FileText, Database, Compass, CheckCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { formatCurrency } from '../../utils/helpers'
+import { sendChatMessage } from '../../utils/api'
 
 export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false)
@@ -11,7 +11,7 @@ export default function Chatbot() {
     {
       id: 1,
       sender: 'bot',
-      text: 'Namaste! I am ZeroReturn AI. 🤖 I can help you analyze risk scores, return rates, or recommend listings enhancements. Ask me anything!',
+      text: 'Namaste! I am ZeroReturn AI Copilot. 🤖 Ask me questions in plain English, and I will query the data warehouse (NL2SQL) and retrieve glossary definitions (RAG) automatically!',
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ])
@@ -61,49 +61,45 @@ export default function Chatbot() {
     }
   }
 
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     if (e) e.preventDefault()
     if (!input.trim()) return
 
+    const userText = input
     const userMsg = {
       id: Date.now(),
       sender: 'user',
-      text: input,
+      text: userText,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
 
     setMessages(prev => [...prev, userMsg])
-    const query = input.toLowerCase()
     setInput('')
-
-    // Simulate typing
     setIsTyping(true)
-    setTimeout(() => {
-      let responseText = "I'm processing your request. ZeroReturn ML models are analyzing listing data now. Try asking about 'return rate', 'electronics category', or 'reduce returns'!"
 
-      if (query.includes('return rate')) {
-        responseText = `Our current overall store return rate is ₹18.3% (down 3.2% this week). Electronics category remains the highest risk element, while Books have the lowest return rate of 6%.`
-      } else if (query.includes('electronics')) {
-        responseText = `Electronics category has an high-risk factor of 82/100, accounting for ${formatCurrency(1240000)} of our revenue at risk. The primary causes are description mismatches regarding technical specifications and size details.`
-      } else if (query.includes('reduce') || query.includes('fix')) {
-        responseText = `Here are 3 high-impact actions you can take today:
-1. Add standard sizing charts to high-risk Clothing & Footwear categories.
-2. Refine specifications in Electronics listings to resolve size/interface discrepancies.
-3. Optimize listing images under studio lighting to resolve color mismatch reviews.`
-      } else if (query.includes('chart') || query.includes('show')) {
-        responseText = `I have loaded your Return Trend Line. We had a return rate spike on Day 15 (Electronics category) where return levels touched 24%. It has since stabilized to 18.3%.`
-      } else if (query.includes('hi') || query.includes('hello')) {
-        responseText = `Hello! How can I assist you with e-commerce return analytics today? You can ask me to evaluate return rate or suggest listings improvements.`
+    try {
+      const res = await sendChatMessage({ message: userText })
+      const botData = res.data
+
+      const botMsg = {
+        id: Date.now() + 1,
+        sender: 'bot',
+        text: botData.reply,
+        dataContext: botData.data_context, // contains SQL & RAG metadata
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
-
+      setMessages(prev => [...prev, botMsg])
+    } catch (err) {
+      toast.error("Copilot request failed.")
       setMessages(prev => [...prev, {
         id: Date.now() + 1,
         sender: 'bot',
-        text: responseText,
+        text: "Sorry, I am having trouble connecting to the decision engine.",
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }])
+    } finally {
       setIsTyping(false)
-    }, 1200)
+    }
   }
 
   return (
@@ -147,8 +143,8 @@ export default function Chatbot() {
               position: 'fixed',
               bottom: '96px',
               right: '24px',
-              width: '380px',
-              height: '520px',
+              width: '420px',
+              height: '600px',
               maxHeight: 'calc(100vh - 120px)',
               display: 'flex',
               flexDirection: 'column',
@@ -156,7 +152,7 @@ export default function Chatbot() {
               border: '1px solid var(--glass-border)',
               boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)',
               overflow: 'hidden',
-              background: 'rgba(10, 8, 20, 0.95)',
+              background: 'rgba(10, 8, 20, 0.96)',
               backdropFilter: 'blur(20px)',
             }}
           >
@@ -171,32 +167,12 @@ export default function Chatbot() {
             }}>
               <div>
                 <h3 style={{ margin: '0 0 2px', fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  ZeroReturn AI
+                  ZeroReturn AI Copilot
                 </h3>
                 <span className="badge badge-low" style={{ fontSize: '0.65rem', padding: '2px 6px', background: 'rgba(6,182,212,0.1)', color: 'var(--accent-secondary)' }}>
-                  Powered by LLaMA 3
+                  Llama 3.3 • SQL & RAG Ingest
                 </span>
               </div>
-              <button
-                onClick={() => {
-                  toast.success('Offline mode: Backend integration required for advanced actions.')
-                }}
-                className="btn-ghost"
-                style={{
-                  padding: '6px',
-                  borderRadius: '8px',
-                  color: 'var(--text-secondary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  fontSize: '0.75rem',
-                  border: '1px solid var(--glass-border)',
-                  cursor: 'pointer'
-                }}
-              >
-                <BarChart2 size={14} />
-                <span>Generate Chart</span>
-              </button>
             </div>
 
             {/* Chat History Messages */}
@@ -210,6 +186,7 @@ export default function Chatbot() {
             }}>
               {messages.map((msg) => {
                 const isBot = msg.sender === 'bot'
+                const hasCtx = msg.dataContext
                 return (
                   <div
                     key={msg.id}
@@ -245,7 +222,7 @@ export default function Chatbot() {
                     </div>
 
                     <div style={{
-                      maxWidth: '85%',
+                      maxWidth: '90%',
                       padding: '12px 16px',
                       borderRadius: isBot ? '0 16px 16px 16px' : '16px 0 16px 16px',
                       background: isBot ? 'rgba(255, 255, 255, 0.03)' : 'var(--accent-primary)',
@@ -256,6 +233,77 @@ export default function Chatbot() {
                       whiteSpace: 'pre-line'
                     }}>
                       {msg.text}
+
+                      {/* Display Copilot Context details inside bot chat bubbles */}
+                      {isBot && hasCtx && (
+                        <div style={{ marginTop: 12, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 10 }}>
+                          
+                          {/* 1. Generated SQL block */}
+                          {hasCtx.sql_details && (
+                            <div style={{ marginBottom: 10 }}>
+                              <span style={{ fontSize: 10, color: 'var(--accent-secondary)', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 700 }}>
+                                <Database size={11} /> GENERATED SQL:
+                              </span>
+                              <pre style={{
+                                margin: '4px 0',
+                                padding: 8,
+                                background: 'rgba(0,0,0,0.4)',
+                                borderRadius: 6,
+                                overflowX: 'auto',
+                                fontSize: 10,
+                                color: '#A7F3D0'
+                              }}>{hasCtx.sql_details.sql}</pre>
+                              
+                              {/* Small Results Table */}
+                              {hasCtx.sql_details.results && hasCtx.sql_details.results.length > 0 && (
+                                <div style={{ overflowX: 'auto', marginTop: 6 }}>
+                                  <table style={{ width: '100%', fontSize: 9, borderCollapse: 'collapse', background: 'rgba(255,255,255,0.02)' }}>
+                                    <thead>
+                                      <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                                        {Object.keys(hasCtx.sql_details.results[0]).slice(0, 3).map(k => (
+                                          <th key={k} style={{ textAlign: 'left', padding: 4, color: 'var(--text-muted)' }}>{k}</th>
+                                        ))}
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {hasCtx.sql_details.results.slice(0, 3).map((row, rIdx) => (
+                                        <tr key={rIdx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                          {Object.values(row).slice(0, 3).map((val, vIdx) => (
+                                            <td key={vIdx} style={{ padding: 4 }}>{typeof val === 'number' ? val.toLocaleString() : String(val)}</td>
+                                          ))}
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* 2. RAG glossary context details */}
+                          {hasCtx.rag_hits && hasCtx.rag_hits.length > 0 && (
+                            <div style={{ marginBottom: 10 }}>
+                              <span style={{ fontSize: 10, color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 700 }}>
+                                <Compass size={11} /> GLOSSARY (RAG KNOWLEDGE):
+                              </span>
+                              {hasCtx.rag_hits.map((hit, hIdx) => (
+                                <div key={hIdx} style={{ fontSize: 10, margin: '4px 0', padding: 6, background: 'rgba(139,92,246,0.08)', borderLeft: '2px solid var(--accent-primary)', borderRadius: 4 }}>
+                                  <strong>{hit.title}:</strong> {hit.content}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* 3. Expected impact summary */}
+                          {hasCtx.expected_impact && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: '#10B981', fontWeight: 700 }}>
+                              <CheckCircle size={12} /> Expected savings: {hasCtx.expected_impact}
+                            </div>
+                          )}
+
+                        </div>
+                      )}
+
                     </div>
                   </div>
                 )
@@ -285,9 +333,9 @@ export default function Chatbot() {
                     gap: '4px',
                     alignItems: 'center'
                   }}>
-                    <span className="dot-loading" />
-                    <span className="dot-loading" />
-                    <span className="dot-loading" />
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#FFF', animate: 'ping 1s infinite' }} />
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#FFF', animate: 'ping 1s infinite', animationDelay: '0.2s' }} />
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#FFF', animate: 'ping 1s infinite', animationDelay: '0.4s' }} />
                   </div>
                 </div>
               )}
@@ -313,7 +361,7 @@ export default function Chatbot() {
                   padding: '10px',
                   borderRadius: '10px',
                   border: 'none',
-                  background: isListening ? 'var(--text-danger, #EF4444)' : 'rgba(255,255,255,0.05)',
+                  background: isListening ? '#EF4444' : 'rgba(255,255,255,0.05)',
                   color: isListening ? '#fff' : 'var(--text-secondary)',
                   cursor: 'pointer',
                   display: 'flex',
@@ -327,7 +375,7 @@ export default function Chatbot() {
 
               <input
                 type="text"
-                placeholder="Ask ZeroReturn AI..."
+                placeholder="Ask Copilot (e.g. show categories, what is CLV?)..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 style={{

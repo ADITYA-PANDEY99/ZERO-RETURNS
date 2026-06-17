@@ -6,14 +6,15 @@ import {
 } from 'recharts'
 import {
   Download, Zap, TrendingUp, Info, HelpCircle, AlertTriangle, ShieldAlert,
-  Award, ArrowUpRight, CheckCircle, Flame, Layers, Database, Compass, RefreshCw
+  Award, ArrowUpRight, CheckCircle, Flame, Layers, Database, Compass, RefreshCw, Smile
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import AppLayout from '../components/layout/AppLayout'
 import { formatCurrency, formatNumber, getChartColors } from '../utils/helpers'
 import {
   getSQLKPIs, getSQLCohorts, getSQLRFM, getSQLPareto, runWhatIf, getForecast,
-  getExperiments, getHypotheses, getScorecards, getDrilldown, getAlerts, getDataQuality
+  getExperiments, getHypotheses, getScorecards, getDrilldown, getAlerts, getDataQuality,
+  getSocialReviews, getExecutiveReport
 } from '../utils/api'
 
 // Tooltip style
@@ -36,7 +37,9 @@ const MODULES = [
   'KPI Drilldown Engine',
   'Alert Center',
   'Data Quality Command',
-  'Marketplace Analytics',
+  'Social Intelligence',
+  'Executive MBR Report',
+  'Marketplace Cohorts',
   'Impact Simulator',
   'Forecasting Hub'
 ]
@@ -145,6 +148,12 @@ export default function Analytics() {
   const [alertData, setAlertData] = useState([])
   const [dataQualityData, setDataQualityData] = useState(null)
 
+  // Sprint 5 GenAI States
+  const [socialData, setSocialData] = useState(null)
+  const [reportData, setReportData] = useState(null)
+  const [reportType, setReportType] = useState('monthly')
+  const [reportLoading, setReportLoading] = useState(false)
+
   // Forecast states
   const [forecastMetric, setForecastMetric] = useState('return_rate')
   const [forecastResult, setForecastResult] = useState(null)
@@ -164,7 +173,8 @@ export default function Analytics() {
         setLoading(true)
         const [
           kpiRes, cohortRes, rfmRes, paretoRes,
-          expRes, hypRes, scRes, drillRes, alertRes, dqRes
+          expRes, hypRes, scRes, drillRes, alertRes, dqRes,
+          socialRes, reportRes
         ] = await Promise.all([
           getSQLKPIs(),
           getSQLCohorts(),
@@ -175,7 +185,9 @@ export default function Analytics() {
           getScorecards(),
           getDrilldown(),
           getAlerts(),
-          getDataQuality()
+          getDataQuality(),
+          getSocialReviews(),
+          getExecutiveReport({ type: 'monthly' })
         ])
         setKpiData(kpiRes.data)
         setCohortData(cohortRes.data)
@@ -187,6 +199,8 @@ export default function Analytics() {
         setDrilldownData(drillRes.data)
         setAlertData(alertRes.data)
         setDataQualityData(dqRes.data)
+        setSocialData(socialRes.data)
+        setReportData(reportRes.data)
       } catch (err) {
         toast.error("Failed to load analytical metrics from decision engine.")
       } finally {
@@ -211,6 +225,24 @@ export default function Analytics() {
     }
     loadForecast()
   }, [forecastMetric])
+
+  // GenAI MBR fetch triggers
+  useEffect(() => {
+    async function loadReport() {
+      try {
+        setReportLoading(true)
+        const res = await getExecutiveReport({ type: reportType })
+        setReportData(res.data)
+      } catch (err) {
+        toast.error("Failed to generate executive report")
+      } finally {
+        setReportLoading(false)
+      }
+    }
+    if (kpiData) {
+      loadReport()
+    }
+  }, [reportType])
 
   // Run Simulator on change
   useEffect(() => {
@@ -595,7 +627,6 @@ export default function Analytics() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   {alertData.map((alert) => {
                     const isHigh = alert.severity === 'High'
-                    const isMed = alert.severity === 'Medium'
                     const isResolved = alert.status === 'Resolved'
                     const alertColor = isResolved ? '#10B981' : isHigh ? '#EF4444' : '#F59E0B'
                     return (
@@ -719,62 +750,208 @@ export default function Analytics() {
               </div>
             )}
 
-            {/* 7. CUSTOMER & PRODUCT INTELLIGENCE (COHORT/RFM) */}
+            {/* 7. SOCIAL INTELLIGENCE */}
             {activeModule === 6 && (
               <div>
                 <RecruiterMetadata
-                  question="How are return risks distributed across customer segments and product price cohorts?"
-                  formula="CLV = Sum(Order Prices); Return Rate = Returns / Sales"
-                  method="Cohort Price Tier Matrix & RFM customer Segmentation"
-                  usecase="Amazon customer risk profiling & Blinkit supplier contract updates"
-                  interpretation="VIP Customers exhibit high monetary value and healthy return habits. Low/Budget clothing cohorts suffer from sizing return rates."
+                  question="What are the emerging customer complaint clusters and sentiment trends?"
+                  formula="Brand Health = Positives / Total Reviews * 100"
+                  method="Social Sentiment NLP categorization & emerging issues volume trackers"
+                  usecase="Zomato / Blinkit / Swiggy feedback analytics & merchant compliance rankings"
+                  interpretation="Brand health index tracks user reviews sentiment. complaint volume clusters highlight systemic packaging or sizing errors."
                 />
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }} className="marketplace-grid">
-                  <style>{`@media (max-width: 900px) { .marketplace-grid { grid-template-columns: 1fr !important; } }`}</style>
-                  
-                  {/* RFM segmentations */}
-                  <div className="glass-card" style={{ padding: 20 }}>
-                    <h3 style={{ margin: '0 0 16px', fontSize: 14, color: '#FFF' }}>Customer RFM Segments</h3>
-                    <ResponsiveContainer width="100%" height={220}>
-                      <BarChart data={rfmData.slice(0, 10)}>
-                        <XAxis dataKey="customer_name" tick={{ fontSize: 10 }} />
-                        <YAxis />
-                        <Tooltip {...glassTooltipStyle} />
-                        <Bar dataKey="monetary_value" fill="var(--chart-2)" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
+                {socialData && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 20 }} className="social-grid">
+                      <style>{`@media (max-width: 900px) { .social-grid { grid-template-columns: 1fr !important; } }`}</style>
+                      
+                      {/* Sentiment metrics */}
+                      <div className="glass-card" style={{ padding: 20 }}>
+                        <h4 style={{ margin: '0 0 16px', fontSize: 14, color: '#FFF', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <Smile size={16} color="var(--accent-secondary)" /> Customer Sentiment Distribution
+                        </h4>
+                        
+                        <div style={{ marginBottom: 20 }}>
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>BRAND HEALTH INDEX</span>
+                          <h2 style={{ margin: '4px 0 0', color: '#10B981', fontWeight: 900 }}>{socialData.brand_health_index}%</h2>
+                          <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Calculated from ratio of 4+ star customer orders.</span>
+                        </div>
 
-                  {/* High Risk customer accounts table */}
-                  <div className="glass-card" style={{ padding: 20 }}>
-                    <h3 style={{ margin: '0 0 16px', fontSize: 14, color: '#FFF' }}>High Risk Customer Accounts</h3>
-                    <div style={{ overflowX: 'auto' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-                        <thead>
-                          <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                            <th style={{ textAlign: 'left', padding: 8 }}>Customer</th>
-                            <th style={{ textAlign: 'right', padding: 8 }}>Monetary</th>
-                            <th style={{ textAlign: 'right', padding: 8 }}>Risk Score</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {rfmData.slice(0, 5).map((r, i) => (
-                            <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                              <td style={{ padding: 8 }}>{r.customer_name}</td>
-                              <td style={{ padding: 8, textAlign: 'right' }}>₹{r.monetary_value.toLocaleString()}</td>
-                              <td style={{ padding: 8, textAlign: 'right', color: r.customer_risk_score > 30 ? '#EF4444' : '#10B981', fontWeight: 700 }}>
-                                {r.customer_risk_score.toFixed(1)}%
-                              </td>
-                            </tr>
+                        <div>
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 8 }}>Sentiment Categories</span>
+                          {[
+                            { key: 'Positive', pct: socialData.sentiment_breakdown.positive, color: '#10B981' },
+                            { key: 'Neutral', pct: socialData.sentiment_breakdown.neutral, color: '#6B7280' },
+                            { key: 'Negative', pct: socialData.sentiment_breakdown.negative, color: '#EF4444' }
+                          ].map((item) => (
+                            <div key={item.key} style={{ marginBottom: 12 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
+                                <span style={{ color: 'var(--text-secondary)' }}>{item.key} Feedback</span>
+                                <span style={{ fontWeight: 700, color: item.color }}>{item.pct}%</span>
+                              </div>
+                              <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' }}>
+                                <div style={{ width: `${item.pct}%`, height: '100%', background: item.color }} />
+                              </div>
+                            </div>
                           ))}
-                        </tbody>
-                      </table>
+                        </div>
+                      </div>
+
+                      {/* Emerging issues */}
+                      <div className="glass-card" style={{ padding: 20 }}>
+                        <h4 style={{ margin: '0 0 16px', fontSize: 14, color: '#FFF' }}>Emerging Reviews & Quality Issues</h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                          {socialData.emerging_issues.map((issue, idx) => (
+                            <div key={idx} style={{ padding: 12, background: 'rgba(255,255,255,0.02)', borderLeft: '3px solid #EF4444', borderRadius: 6 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4 }}>
+                                <span style={{ fontWeight: 800, color: '#FFF' }}>{issue.issue}</span>
+                                <span style={{ color: '#EF4444' }}>{issue.severity} Severity</span>
+                              </div>
+                              <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                                Category: <strong>{issue.category}</strong> | Occurrences: <strong>{issue.frequency} review mentions</strong>
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Complaint clusters */}
+                    <div className="glass-card" style={{ padding: 20 }}>
+                      <h4 style={{ margin: '0 0 16px', fontSize: 14, color: '#FFF' }}>Customer Complaints Semantic Clusters</h4>
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                          <thead>
+                            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                              <th style={{ textAlign: 'left', padding: 8, color: 'var(--text-muted)' }}>Semantic Feedback Cluster</th>
+                              <th style={{ textAlign: 'right', padding: 8, color: 'var(--text-muted)' }}>Complaint share</th>
+                              <th style={{ textAlign: 'right', padding: 8, color: 'var(--text-muted)' }}>Sample Volume</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {socialData.complaint_clusters.map((cluster, idx) => (
+                              <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                <td style={{ padding: 8, fontWeight: 600, color: '#FFF' }}>{cluster.cluster}</td>
+                                <td style={{ padding: 8, textAlign: 'right', color: 'var(--text-secondary)' }}>{cluster.percentage}%</td>
+                                <td style={{ padding: 8, textAlign: 'right', fontWeight: 700, color: 'var(--accent-secondary)' }}>{cluster.volume} complaints</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   </div>
+                )}
+              </div>
+            )}
+
+            {/* 8. EXECUTIVE MBR REPORT GENERATOR */}
+            {activeModule === 7 && (
+              <div>
+                <RecruiterMetadata
+                  question="Can we generate formatted Weekly/Monthly executive reviews outlining MBR summaries?"
+                  formula="Aggregations of monthly facts coupled with LLM consulting recommendations"
+                  method="Automated Executive consulting-grade report builder"
+                  usecase="JP Morgan credit risk reports & Blinkit monthly operations reviews"
+                  interpretation="Consulting report summarizes high level KPI performance alongside specific recommendations mapped by priorities."
+                />
+
+                <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+                  {['weekly', 'monthly', 'quarterly'].map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setReportType(t)}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: 8,
+                        background: reportType === t ? 'var(--accent-primary)' : 'rgba(255,255,255,0.04)',
+                        border: '1px solid var(--glass-border)',
+                        color: '#FFF',
+                        cursor: 'pointer',
+                        fontSize: 12,
+                        fontWeight: 600
+                      }}
+                    >
+                      {t.toUpperCase()} REPORT
+                    </button>
+                  ))}
                 </div>
 
-                <div className="glass-card" style={{ padding: 24 }}>
+                {reportLoading ? (
+                  <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <p style={{ color: 'var(--text-muted)' }}>Generating executive report...</p>
+                  </div>
+                ) : reportData ? (
+                  <div className="glass-card" style={{ padding: 24, background: 'rgba(255, 255, 255, 0.01)', border: '1px solid var(--glass-border)' }}>
+                    {/* Report Header */}
+                    <div style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 16, marginBottom: 20 }}>
+                      <h2 style={{ margin: 0, fontSize: 18, color: '#FFF', fontFamily: 'Syne, sans-serif' }}>{reportData.report_title}</h2>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Generated at: {reportData.generated_at} (decision logic active)</span>
+                    </div>
+
+                    {/* KPIs grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
+                      {Object.entries(reportData.key_performance_indicators).map(([key, val]) => (
+                        <div key={key} style={{ padding: 12, background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
+                          <span style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block' }}>{key.replace(/_/g, ' ').toUpperCase()}</span>
+                          <span style={{ fontSize: 15, fontWeight: 800, color: '#FFF' }}>
+                            {typeof val === 'number' ? (key.includes('revenue') ? '₹' + val.toLocaleString() : val) : val}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Consulting-grade insights */}
+                    <h4 style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--text-muted)' }}>CONSULTING-GRADE MBR INSIGHTS:</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
+                      {reportData.insights.map((insight, idx) => (
+                        <div key={idx} style={{ padding: 16, background: 'rgba(255,255,255,0.02)', borderLeft: '4px solid var(--accent-primary)', borderRadius: 6 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                            <span style={{ fontWeight: 800, color: '#FFF', fontSize: 13 }}>Insight #{idx + 1}</span>
+                            <span className="badge badge-critical" style={{ fontSize: '0.65rem', padding: '2px 6px' }}>{insight.priority} Priority</span>
+                          </div>
+                          <p style={{ margin: '4px 0', fontSize: 12, color: '#FFF' }}><strong>Observation:</strong> {insight.observation}</p>
+                          <p style={{ margin: '4px 0', fontSize: 12, color: 'var(--text-secondary)' }}><strong>Impact:</strong> {insight.impact}</p>
+                          <p style={{ margin: '4px 0', fontSize: 12, color: 'var(--text-secondary)' }}><strong>Recommendation:</strong> {insight.recommendation}</p>
+                          <p style={{ margin: '4px 0 0', fontSize: 12, color: '#10B981', fontWeight: 700 }}><strong>Expected outcome:</strong> {insight.expected_outcome}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Projections & recommendations */}
+                    <div style={{ padding: 14, background: 'rgba(139,92,246,0.06)', borderRadius: 8, marginBottom: 20 }}>
+                      <span style={{ fontSize: 10, color: 'var(--accent-primary)', fontWeight: 800, display: 'block', marginBottom: 4 }}>DATA SCIENCE FORECAST:</span>
+                      <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{reportData.forecast_projection}</p>
+                    </div>
+
+                    <div>
+                      <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 800, display: 'block', marginBottom: 6 }}>NEXT STEPS ACTION CHECKLIST:</span>
+                      {reportData.operational_recommendations.map((rec, idx) => (
+                        <div key={idx} style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent-primary)' }} />
+                          {rec}
+                        </div>
+                      ))}
+                    </div>
+
+                  </div>
+                ) : null}
+              </div>
+            )}
+
+            {/* 9. MARKETPLACE COHORTS */}
+            {activeModule === 8 && (
+              <div>
+                <RecruiterMetadata
+                  question="Which product categories and price brackets drive the highest return rates?"
+                  formula="Product Health Score = (1.0 - Return Rate) * 100"
+                  method="Cohort Price Tier Matrix Analysis"
+                  usecase="Zepto / Blinkit catalog performance reviews"
+                  interpretation="Filter items with health scores below 70 to target listing revision or description checks."
+                />
+
+                <div className="glass-card" style={{ padding: 24, marginBottom: 24 }}>
                   <h3 style={{ margin: '0 0 16px', fontSize: 14, color: '#FFF' }}>Return Rates by Category & Price Tier Cohort</h3>
                   <ResponsiveContainer width="100%" height={260}>
                     <BarChart data={cohortData.slice(0, 12)}>
@@ -793,8 +970,8 @@ export default function Analytics() {
               </div>
             )}
 
-            {/* 8. REVENUE IMPACT SIMULATOR */}
-            {activeModule === 7 && (
+            {/* 10. REVENUE IMPACT SIMULATOR */}
+            {activeModule === 9 && (
               <div>
                 <RecruiterMetadata
                   question="What is the expected savings from improvements in description or image parameters?"
@@ -866,8 +1043,8 @@ export default function Analytics() {
               </div>
             )}
 
-            {/* 9. TIME SERIES FORECASTING HUB */}
-            {activeModule === 8 && (
+            {/* 11. TIME SERIES FORECASTING HUB */}
+            {activeModule === 10 && (
               <div>
                 <RecruiterMetadata
                   question="What are the predicted trends for return rate, revenue, refunds and complaints?"

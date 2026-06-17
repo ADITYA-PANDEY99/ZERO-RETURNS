@@ -89,12 +89,28 @@ async def send_message(body: ChatMessage) -> ChatResponse:
     # Keep last 10 messages (5 turns)
     history = _SESSIONS[session_id][-10:]
 
+    data_context = None
+
     # Generate response
     if groq_svc.available:
-        messages = [{"role": "system", "content": SYSTEM_PROMPT}] + history
-        reply = groq_svc.chat(messages, language=language)
+        from app.routers.analytics import _get_populated_analytics_db
+        from app.utils.copilot_engine import AnalyticsCopilot
+        db_conn = _get_populated_analytics_db()
+        try:
+            copilot = AnalyticsCopilot(groq_svc)
+            copilot_res = copilot.ask(db_conn, body.message)
+            reply = copilot_res["business_summary"]
+            data_context = copilot_res
+        except Exception as e:
+            logger.error(f"Error in chatbot copilot execution: {e}")
+            messages = [{"role": "system", "content": SYSTEM_PROMPT}] + history
+            reply = groq_svc.chat(messages, language=language)
+            data_context = _relevant_data_context(body.message)
+        finally:
+            db_conn.close()
     else:
         reply = _rule_based_response(body.message, language)
+        data_context = _relevant_data_context(body.message)
 
     # Add assistant reply to history
     _SESSIONS[session_id].append({"role": "assistant", "content": reply})
@@ -107,8 +123,9 @@ async def send_message(body: ChatMessage) -> ChatResponse:
         language=language,
         session_id=session_id,
         suggestions=suggestions,
-        data_context=_relevant_data_context(body.message),
+        data_context=data_context,
     )
+
 
 
 @router.post("/upload-data")
@@ -147,11 +164,50 @@ async def upload_data_for_chat(file: UploadFile = File(...)) -> Dict[str, Any]:
         return analysis
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Could not parse file: {str(e)}")
+@router.post("/copilot/query")
+async def copilot_query(body: ChatMessage) -> Dict[str, Any]:
+    """Analytics Copilot Coordinator query matching SQL + RAG knowledge."""
+    from app.routers.analytics import _get_populated_analytics_db
+    from app.utils.copilot_engine import AnalyticsCopilot
+    
+    db_conn = _get_populated_analytics_db()
+    try:
+        copilot = AnalyticsCopilot(groq_svc)
+        return copilot.ask(db_conn, body.message)
+    finally:
+        db_conn.close()
+
+
+@router.get("/social/reviews")
+async def social_reviews_cluster() -> Dict[str, Any]:
+    """Retrieve social sentiment trends and emerging product issues."""
+    from app.routers.analytics import _get_populated_analytics_db
+    from app.utils.copilot_engine import SocialIntelligenceEngine
+    
+    db_conn = _get_populated_analytics_db()
+    try:
+        return SocialIntelligenceEngine.analyze_reviews(db_conn)
+    finally:
+        db_conn.close()
+
+
+@router.get("/executive/report")
+async def get_mbr_report(type: str = "monthly") -> Dict[str, Any]:
+    """Generates a structured monthly/weekly executive consulting report."""
+    from app.routers.analytics import _get_populated_analytics_db
+    from app.utils.copilot_engine import ExecutiveReportGenerator
+    
+    db_conn = _get_populated_analytics_db()
+    try:
+        return ExecutiveReportGenerator.generate_mbr_report(db_conn, type)
+    finally:
+        db_conn.close()
 
 
 # ---------------------------------------------------------------------------
 # Rule-based response engine
 # ---------------------------------------------------------------------------
+
 
 def _rule_based_response(message: str, language: str = "en") -> str:
     """Smart keyword-based chatbot that feels data-aware without any LLM."""

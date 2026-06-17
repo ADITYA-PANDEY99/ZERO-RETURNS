@@ -60,11 +60,15 @@ export const uploadCSV = (formData) => api.post('/upload/csv', formData, {
 })
 export const getUploadStatus = (jobId) => api.get(`/upload/${jobId}/status`)
 
-// Chatbot
+// Chatbot & Copilot
 export const sendChatMessage = (data) => api.post('/chatbot/message', data)
+export const askCopilot = (data) => api.post('/chatbot/copilot/query', data)
+export const getSocialReviews = () => api.get('/chatbot/social/reviews')
+export const getExecutiveReport = (params) => api.get('/chatbot/executive/report', { params })
 export const uploadChatData = (formData) => api.post('/chatbot/upload-data', formData, {
   headers: { 'Content-Type': 'multipart/form-data' }
 })
+
 
 // Auth
 export const login = (data) => api.post('/auth/login', data)
