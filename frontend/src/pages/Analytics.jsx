@@ -4,11 +4,17 @@ import {
   LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell
 } from 'recharts'
-import { Download, Zap, TrendingUp, Info, HelpCircle, AlertTriangle, ShieldAlert, Award, ArrowUpRight } from 'lucide-react'
+import {
+  Download, Zap, TrendingUp, Info, HelpCircle, AlertTriangle, ShieldAlert,
+  Award, ArrowUpRight, CheckCircle, Flame, Layers, Database, Compass, RefreshCw
+} from 'lucide-react'
 import toast from 'react-hot-toast'
 import AppLayout from '../components/layout/AppLayout'
 import { formatCurrency, formatNumber, getChartColors } from '../utils/helpers'
-import { getSQLKPIs, getSQLCohorts, getSQLRFM, getSQLPareto, runWhatIf, getForecast } from '../utils/api'
+import {
+  getSQLKPIs, getSQLCohorts, getSQLRFM, getSQLPareto, runWhatIf, getForecast,
+  getExperiments, getHypotheses, getScorecards, getDrilldown, getAlerts, getDataQuality
+} from '../utils/api'
 
 // Tooltip style
 const glassTooltipStyle = {
@@ -24,18 +30,19 @@ const glassTooltipStyle = {
 }
 
 const MODULES = [
-  'Executive Center',
-  'Customer Intelligence',
-  'Product Intelligence',
-  'Seller Intelligence',
-  'Operational Intelligence',
+  'Executive Scorecards',
+  'A/B Testing Lab',
+  'Hypothesis Testing Hub',
+  'KPI Drilldown Engine',
+  'Alert Center',
+  'Data Quality Command',
+  'Marketplace Analytics',
   'Impact Simulator',
-  'Forecasting Hub',
-  'Insight Center'
+  'Forecasting Hub'
 ]
 
 // Recruiter Info Metadata Card
-function RecruiterMetadata({ question, formula, source, interpretation }) {
+function RecruiterMetadata({ question, formula, method, interpretation, usecase }) {
   return (
     <div style={{
       marginBottom: 20,
@@ -45,7 +52,7 @@ function RecruiterMetadata({ question, formula, source, interpretation }) {
       border: '1px solid rgba(139,92,246,0.2)'
     }}>
       <h4 style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 700, color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-        <HelpCircle size={14} /> METADATA (Interview / Recruiter Mode)
+        <HelpCircle size={14} /> METADATA (Recruiter & Interview Mode Context)
       </h4>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 12 }}>
         <div>
@@ -57,14 +64,67 @@ function RecruiterMetadata({ question, formula, source, interpretation }) {
           <p style={{ margin: '2px 0 0', color: 'var(--text-secondary)' }}><code>{formula}</code></p>
         </div>
         <div>
-          <span style={{ color: 'var(--text-muted)' }}>Data Source:</span>
-          <p style={{ margin: '2px 0 0', color: 'var(--text-secondary)' }}>{source}</p>
+          <span style={{ color: 'var(--text-muted)' }}>Statistical Method:</span>
+          <p style={{ margin: '2px 0 0', color: 'var(--text-secondary)' }}>{method}</p>
         </div>
         <div>
+          <span style={{ color: 'var(--text-muted)' }}>Use Case (FAANG/Fintech):</span>
+          <p style={{ margin: '2px 0 0', color: 'var(--text-secondary)' }}>{usecase}</p>
+        </div>
+        <div style={{ gridColumn: 'span 2' }}>
           <span style={{ color: 'var(--text-muted)' }}>Interpretation Guide:</span>
           <p style={{ margin: '2px 0 0', color: 'var(--text-secondary)' }}>{interpretation}</p>
         </div>
       </div>
+    </div>
+  )
+}
+
+// Collapsible Drilldown Node
+function DrilldownNode({ node, level = 0 }) {
+  const [isOpen, setIsOpen] = useState(level === 0)
+  const hasChildren = node.children && node.children.length > 0
+  const indent = level * 20
+
+  return (
+    <div style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+      <div
+        onClick={() => hasChildren && setIsOpen(!isOpen)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          padding: '10px 14px',
+          paddingLeft: 14 + indent,
+          cursor: hasChildren ? 'pointer' : 'default',
+          background: level === 0 ? 'rgba(139,92,246,0.05)' : 'transparent',
+          transition: 'all 0.2s',
+          fontSize: 13
+        }}
+        className="drilldown-row"
+      >
+        <span style={{ marginRight: 8, display: 'inline-block', width: 12, color: 'var(--accent-primary)', fontWeight: 800 }}>
+          {hasChildren ? (isOpen ? '▼' : '▶') : '•'}
+        </span>
+        <span style={{ flex: 1, color: level === 0 ? '#FFF' : 'var(--text-secondary)', fontWeight: level === 0 ? 700 : 400 }}>
+          {node.name}
+        </span>
+        <span style={{ width: 120, textAlign: 'right', fontWeight: 600, color: '#FFF' }}>
+          {formatCurrency(node.revenue)}
+        </span>
+        <span style={{ width: 100, textAlign: 'right', color: 'var(--text-secondary)' }}>
+          {node.orders}
+        </span>
+        <span style={{ width: 100, textAlign: 'right', color: node.return_rate > 18 ? '#EF4444' : '#10B981', fontWeight: 700 }}>
+          {node.return_rate.toFixed(1)}%
+        </span>
+      </div>
+      {hasChildren && isOpen && (
+        <div>
+          {node.children.map((child, idx) => (
+            <DrilldownNode key={idx} node={child} level={level + 1} />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -76,6 +136,14 @@ export default function Analytics() {
   const [rfmData, setRfmData] = useState([])
   const [paretoData, setParetoData] = useState(null)
   const [loading, setLoading] = useState(true)
+
+  // Sprint 4 States
+  const [experimentData, setExperimentData] = useState([])
+  const [hypothesisData, setHypothesisData] = useState([])
+  const [scorecardData, setScorecardData] = useState([])
+  const [drilldownData, setDrilldownData] = useState(null)
+  const [alertData, setAlertData] = useState([])
+  const [dataQualityData, setDataQualityData] = useState(null)
 
   // Forecast states
   const [forecastMetric, setForecastMetric] = useState('return_rate')
@@ -91,26 +159,41 @@ export default function Analytics() {
   const colors = getChartColors()
 
   useEffect(() => {
-    async function loadData() {
+    async function loadAllData() {
       try {
         setLoading(true)
-        const [kpiRes, cohortRes, rfmRes, paretoRes] = await Promise.all([
+        const [
+          kpiRes, cohortRes, rfmRes, paretoRes,
+          expRes, hypRes, scRes, drillRes, alertRes, dqRes
+        ] = await Promise.all([
           getSQLKPIs(),
           getSQLCohorts(),
           getSQLRFM(),
-          getSQLPareto()
+          getSQLPareto(),
+          getExperiments(),
+          getHypotheses(),
+          getScorecards(),
+          getDrilldown(),
+          getAlerts(),
+          getDataQuality()
         ])
         setKpiData(kpiRes.data)
         setCohortData(cohortRes.data)
         setRfmData(rfmRes.data)
         setParetoData(paretoRes.data)
+        setExperimentData(expRes.data)
+        setHypothesisData(hypRes.data)
+        setScorecardData(scRes.data)
+        setDrilldownData(drillRes.data)
+        setAlertData(alertRes.data)
+        setDataQualityData(dqRes.data)
       } catch (err) {
-        toast.error("Failed to load analytical metrics from feature warehouse.")
+        toast.error("Failed to load analytical metrics from decision engine.")
       } finally {
         setLoading(false)
       }
     }
-    loadData()
+    loadAllData()
   }, [])
 
   // Forecast fetch triggers
@@ -140,7 +223,7 @@ export default function Analytics() {
         })
         setSimResults(res.data)
       } catch (err) {
-        // Silently swallow simulator sync errors
+        // Silently swallow simulator sync
       }
     }
     triggerSim()
@@ -150,7 +233,7 @@ export default function Analytics() {
     return (
       <AppLayout>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
-          <div style={{ fontSize: 16, color: 'var(--text-muted)' }}>Syncing warehouse data features...</div>
+          <div style={{ fontSize: 16, color: 'var(--text-muted)' }}>Syncing marketplace warehouse features...</div>
         </div>
       </AppLayout>
     )
@@ -161,7 +244,6 @@ export default function Analytics() {
     ? [...cohortData].sort((a, b) => b.return_rate - a.return_rate)[0] 
     : { category: "Electronics", return_rate: 0.284 }
 
-  const totalReturnLosses = paretoData?.total_returns || 2348
   const topRisksList = paretoData?.top_drivers?.slice(0, 3) || []
   const expectedSavingsPotential = Math.round((kpiData?.revenue_at_risk || 2341800) * 0.35)
 
@@ -218,146 +300,439 @@ export default function Analytics() {
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
           >
-            {/* 1. EXECUTIVE COMMAND CENTER */}
+            
+            {/* 1. EXECUTIVE SCORECARDS */}
             {activeModule === 0 && (
               <div>
                 <RecruiterMetadata
-                  question="How is the platform performing financially and operationally overall?"
-                  formula="Return Rate = Count(Returns) / Count(Sales); Refund Rate = Return Rate * 0.95"
-                  source="Supabase analytics warehouse schema tables kpi_daily and kpi_monthly"
-                  interpretation="Track refund rates and return rates simultaneously. Return rates below 15% indicate healthy store operations."
+                  question="How is each segment of the business tracking against monthly targets?"
+                  formula="Variance % = (Current - Target) / Target * 100"
+                  method="Month-over-Month (MoM) Financial & Operations Variance Scoring"
+                  usecase="AMEX / JP Morgan Risk Scorecards & Portfolio Management reviews"
+                  interpretation="On Track represents positive performance within boundaries. Red warning metrics signify critical threshold deviations."
                 />
-                
-                {/* 9 KPIs */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 24 }}>
-                  {[
-                    { label: 'Total Orders', val: formatNumber(kpiData?.total_orders || 0), tooltip: 'Total processed order items' },
-                    { label: 'Return Rate', val: `${((kpiData?.return_rate || 0) * 100).toFixed(1)}%`, tooltip: 'Aggregate rate of customer returns' },
-                    { label: 'Revenue at Risk', val: formatCurrency(kpiData?.revenue_at_risk || 0), tooltip: 'Revenue threatened by return claims' },
-                    { label: 'Revenue Saved', val: formatCurrency(kpiData?.revenue_saved || 0), tooltip: 'Revenue preserved via listing optimizations' },
-                    { label: 'Refund Rate', val: `${((kpiData?.refund_rate || 0) * 100).toFixed(1)}%`, tooltip: 'Percentage of orders returning cash value' },
-                    { label: 'Product Health', val: `${kpiData?.product_health || 0}/100`, tooltip: 'Aggregate quality score across catalogue' },
-                    { label: 'Seller Health', val: `${kpiData?.seller_health || 0}/100`, tooltip: 'Average operational score of vendors' },
-                    { label: 'Customer Health', val: `${kpiData?.customer_health || 0}/100`, tooltip: 'User satisfaction index' },
-                    { label: 'Operational Risk', val: `${kpiData?.operational_risk || 0}%`, tooltip: 'Calculated system risk metric' }
-                  ].map(({ label, val, tooltip }) => (
-                    <div key={label} className="glass-card" style={{ padding: 18, position: 'relative' }}>
-                      <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
-                        {label}
-                      </span>
-                      <h3 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>{val}</h3>
-                      <div className="tooltip-trigger" style={{ position: 'absolute', top: 12, right: 12, cursor: 'pointer', color: 'var(--text-muted)' }}>
-                        <Info size={14} />
-                        <span className="tooltip-text" style={{
-                          visibility: 'hidden',
-                          width: 140,
-                          backgroundColor: '#000',
-                          color: '#fff',
-                          textAlign: 'center',
-                          borderRadius: 6,
-                          padding: '5px',
-                          position: 'absolute',
-                          zIndex: 1,
-                          bottom: '125%',
-                          left: '50%',
-                          marginLeft: -70,
-                          opacity: 0,
-                          transition: 'opacity 0.3s',
-                          fontSize: 10
-                        }}>{tooltip}</span>
-                      </div>
-                    </div>
-                  ))}
+
+                <div className="glass-card" style={{ padding: 20, marginBottom: 24 }}>
+                  <h3 style={{ margin: '0 0 16px', fontSize: 15, color: '#FFF' }}>Monthly Business Review (MBR) Scorecards</h3>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                          <th style={{ textAlign: 'left', padding: '12px 8px', color: 'var(--text-muted)' }}>Scorecard Category</th>
+                          <th style={{ textAlign: 'left', padding: '12px 8px', color: 'var(--text-muted)' }}>Operational KPI</th>
+                          <th style={{ textAlign: 'right', padding: '12px 8px', color: 'var(--text-muted)' }}>Current Month</th>
+                          <th style={{ textAlign: 'right', padding: '12px 8px', color: 'var(--text-muted)' }}>Previous Month</th>
+                          <th style={{ textAlign: 'right', padding: '12px 8px', color: 'var(--text-muted)' }}>Target Goal</th>
+                          <th style={{ textAlign: 'right', padding: '12px 8px', color: 'var(--text-muted)' }}>Variance</th>
+                          <th style={{ textAlign: 'center', padding: '12px 8px', color: 'var(--text-muted)' }}>SLA Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {scorecardData.map((s) => {
+                          const isCurrency = s.units === 'currency'
+                          const isPct = s.units === 'percentage'
+                          const formatVal = (v) => isCurrency ? '₹' + v.toLocaleString() : isPct ? v + '%' : v
+                          const isGood = s.status === 'On Track'
+                          return (
+                            <tr key={s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                              <td style={{ padding: '12px 8px', fontWeight: 700, color: '#FFF' }}>{s.category}</td>
+                              <td style={{ padding: '12px 8px', color: 'var(--text-secondary)' }}>{s.metric_name}</td>
+                              <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 800 }}>{formatVal(s.current)}</td>
+                              <td style={{ padding: '12px 8px', textAlign: 'right', color: 'var(--text-muted)' }}>{formatVal(s.previous)}</td>
+                              <td style={{ padding: '12px 8px', textAlign: 'right', color: 'var(--text-muted)' }}>{formatVal(s.target)}</td>
+                              <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 700, color: s.variance > 0 ? (s.id === 'SC-RET' ? '#EF4444' : '#10B981') : (s.id === 'SC-RET' ? '#10B981' : '#EF4444') }}>
+                                {s.variance > 0 ? '+' : ''}{s.variance}%
+                              </td>
+                              <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                                <span style={{
+                                  padding: '4px 8px',
+                                  borderRadius: 4,
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  background: isGood ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                                  color: isGood ? '#10B981' : '#EF4444',
+                                  border: `1px solid ${isGood ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
+                                }}>
+                                  {s.status}
+                                </span>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
-                {/* Executive Decision Center - Live Analytics Section */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }} className="exec-grid">
+                {/* Live Consulting-Grade Insights and Decision Matrix */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }} className="exec-grid">
                   <style>{`@media (max-width: 768px) { .exec-grid { grid-template-columns: 1fr !important; } }`}</style>
                   
-                  {/* Top Risks & Dynamic Ranking */}
                   <div className="glass-card" style={{ padding: 20 }}>
                     <h3 style={{ margin: '0 0 16px', fontSize: 15, color: '#FFF', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <ShieldAlert size={18} color="#EF4444" /> Dynamic Risk & Impact Matrix
+                      <ShieldAlert size={18} color="#EF4444" /> Live Decision Intelligence: Risk Registry
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                       <div style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: 14, borderRadius: 10 }}>
-                        <span style={{ fontSize: 11, color: '#FCA5A5', fontWeight: 700 }}>CRITICAL RISK CATEGORY</span>
-                        <p style={{ margin: '4px 0 0', fontSize: 14, color: '#FFF' }}>
-                          <strong>{topRiskCategory.category}</strong> carries the highest return rate of <strong>{(topRiskCategory.return_rate * 100).toFixed(1)}%</strong>.
+                        <span style={{ fontSize: 10, color: '#FCA5A5', fontWeight: 800 }}>Observation & Evidence</span>
+                        <p style={{ margin: '4px 0 0', fontSize: 13, color: '#FFF' }}>
+                          <strong>{topRiskCategory.category}</strong> return cohort exceeds the standard SLA parameters, with a return likelihood of <strong>{(topRiskCategory.return_rate * 100).toFixed(1)}%</strong>.
+                        </p>
+                        <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
+                          <strong>Financial Impact:</strong> ₹{(expectedSavingsPotential / 100000).toFixed(1)}L under return threat.
                         </p>
                       </div>
                       
                       <div>
-                        <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 8 }}>Top Return-Driving Products (Pareto Rank)</span>
+                        <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 8 }}>Impact Rank: Highest Return Contributors</span>
                         {topRisksList.map((item, idx) => (
                           <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: 13 }}>
                             <span style={{ color: 'var(--text-secondary)' }}>{idx + 1}. {item.product_name}</span>
-                            <span style={{ color: '#EF4444', fontWeight: 700 }}>{item.total_returns} returns</span>
+                            <span style={{ color: '#EF4444', fontWeight: 700 }}>{item.total_returns} Returns</span>
                           </div>
                         ))}
                       </div>
                     </div>
                   </div>
 
-                  {/* Top Opportunities & Priority Actions */}
                   <div className="glass-card" style={{ padding: 20 }}>
                     <h3 style={{ margin: '0 0 16px', fontSize: 15, color: '#FFF', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Award size={18} color="#10B981" /> Expected Savings & Priority Actions
+                      <Award size={18} color="#10B981" /> Expected Savings & Recommended Actions
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                       <div>
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>MAX REVENUE SAVINGS POTENTIAL</span>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>ESTIMATED CORRECTION BENEFIT</span>
                         <h2 style={{ margin: '4px 0 0', color: '#10B981', fontWeight: 900 }}>{formatCurrency(expectedSavingsPotential)}</h2>
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Estimated by resolving top 80/20 driver product copy errors</span>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Through optimized size guides and White-Background catalog sweeps.</span>
                       </div>
 
                       <div>
-                        <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>Priority Corrective Actions</span>
+                        <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>Priority Action Tasks</span>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                           <div style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <ArrowUpRight size={14} color="#10B981" /> Fix sizing charts for Clothing products to capture ₹4.2L savings.
+                            <ArrowUpRight size={14} color="#10B981" /> deploy interactive size charts for Clothing category immediately.
                           </div>
                           <div style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <ArrowUpRight size={14} color="#10B981" /> Re-score images of Electronics catalog to reduce returns by 18%.
+                            <ArrowUpRight size={14} color="#10B981" /> clean up catalog background noise in Electronics images.
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
 
-                {/* Dashboard Chart overview */}
-                <div className="glass-card" style={{ padding: 24 }}>
-                  <h3 style={{ margin: '0 0 16px', fontSize: 15, color: '#FFF' }}>Returns Trend</h3>
-                  <ResponsiveContainer width="100%" height={240}>
-                    <AreaChart data={[
-                      { date: 'W1', rate: 19.5, prevented: 10 },
-                      { date: 'W2', rate: 18.2, prevented: 22 },
-                      { date: 'W3', rate: 17.1, prevented: 38 },
-                      { date: 'W4', rate: 18.3, prevented: 45 }
-                    ]}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                      <XAxis dataKey="date" />
-                      <YAxis />
-                      <Tooltip {...glassTooltipStyle} />
-                      <Area type="monotone" dataKey="rate" stroke="var(--accent-primary)" fill="rgba(139,92,246,0.1)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
+            {/* 2. A/B TESTING LAB */}
+            {activeModule === 1 && (
+              <div>
+                <RecruiterMetadata
+                  question="Do sizing guides or catalog image cleaners significantly reduce returns?"
+                  formula="Z-score = (p1 - p2) / sqrt(p_pool * (1 - p_pool) * (1/n1 + 1/n2))"
+                  method="Two-Sample Proportions Z-Test & Lift Analysis"
+                  usecase="Amazon / Swiggy / Blinkit feature rolls and optimization trials"
+                  interpretation="P-value < 0.05 rejects the null hypothesis, showing that variant lifts are statistically significant."
+                />
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  {experimentData.map((exp) => (
+                    <div key={exp.experiment_id} className="glass-card" style={{ padding: 24 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
+                        <div>
+                          <span style={{ fontSize: 11, color: 'var(--accent-primary)', fontWeight: 800 }}>{exp.experiment_id} • {exp.status}</span>
+                          <h3 style={{ margin: '4px 0', fontSize: 16, color: '#FFF' }}>{exp.name}</h3>
+                          <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)', maxWidth: 700 }}>{exp.description}</p>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block' }}>METRIC TESTED</span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: '#FFF' }}>{exp.metric_tested}</span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, margin: '20px 0' }}>
+                        <div style={{ padding: 14, borderRadius: 8, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>CONTROL A METRIC</span>
+                          <p style={{ margin: '4px 0 0', fontSize: 15, fontWeight: 700, color: '#FFF' }}>
+                            CR: {exp.control_metrics.conversion_rate}% | RR: {exp.control_metrics.return_rate}%
+                          </p>
+                          <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Traffic: {exp.control_metrics.visitors}</span>
+                        </div>
+                        <div style={{ padding: 14, borderRadius: 8, background: 'rgba(139,92,246,0.05)', border: '1px solid rgba(139,92,246,0.1)' }}>
+                          <span style={{ fontSize: 11, color: 'var(--accent-primary)' }}>VARIANT B METRIC</span>
+                          <p style={{ margin: '4px 0 0', fontSize: 15, fontWeight: 700, color: '#FFF' }}>
+                            CR: {exp.variant_metrics.conversion_rate}% | RR: {exp.variant_metrics.return_rate}%
+                          </p>
+                          <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Traffic: {exp.variant_metrics.visitors}</span>
+                        </div>
+                        <div style={{ padding: 14, borderRadius: 8, background: 'rgba(16, 185, 129, 0.04)', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
+                          <span style={{ fontSize: 11, color: '#10B981' }}>COMPUTED LIFT</span>
+                          <p style={{ margin: '4px 0 0', fontSize: 15, fontWeight: 800, color: '#10B981' }}>
+                            CR: {exp.lift.conversion_rate > 0 ? '+' : ''}{exp.lift.conversion_rate}%
+                          </p>
+                          <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: exp.lift.return_rate < 0 ? '#10B981' : '#EF4444' }}>
+                            RR: {exp.lift.return_rate}%
+                          </p>
+                        </div>
+                        <div style={{ padding: 14, borderRadius: 8, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>STATISTICAL OUTCOMES</span>
+                          <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>
+                            P-Val (CR): {exp.statistical_significance.p_value_conversion}
+                          </p>
+                          <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
+                            P-Val (RR): {exp.statistical_significance.p_value_returns}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 10, alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 8 }}>
+                        <CheckCircle size={16} color={exp.statistical_significance.is_rr_significant ? '#10B981' : '#F59E0B'} />
+                        <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                          <strong>Decision Summary:</strong> Return rate reduction is{' '}
+                          <strong style={{ color: exp.statistical_significance.is_rr_significant ? '#10B981' : '#F59E0B' }}>
+                            {exp.statistical_significance.is_rr_significant ? 'Statistically Significant (p < 0.05)' : 'Not Statistically Significant yet'}
+                          </strong>. Lift confidence limits: [{exp.statistical_significance.confidence_interval_lower}%, {exp.statistical_significance.confidence_interval_upper}%].
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
 
-            {/* 2. CUSTOMER INTELLIGENCE HUB */}
-            {activeModule === 1 && (
+            {/* 3. HYPOTHESIS TESTING HUB */}
+            {activeModule === 2 && (
               <div>
                 <RecruiterMetadata
-                  question="How are return risks distributed across customer segments?"
-                  formula="CLV = Sum(Order Prices); Return Frequency = Count(Returned) / Count(Orders)"
-                  source="customer_analytics feature metrics table"
-                  interpretation="Identify customer return anomalies early to flag policy abusers or wrong sizing issues."
+                  question="Are operational anomalies and return likelihood deviations statistically significant?"
+                  formula="T = (mean1 - mean2) / sqrt(s1^2/n1 + s2^2/n2); Chi2 = Sum( (O - E)^2 / E )"
+                  method="Two-Sample T-Tests, Chi-Square Independence and One-Way ANOVA"
+                  usecase="AmEx card member compliance risk audits & JP Morgan default correlation metrics"
+                  interpretation="Rejecting Null implies a structural operational factor is shifting parameters rather than random noise."
                 />
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }} className="hyp-grid">
+                  <style>{`@media (max-width: 768px) { .hyp-grid { grid-template-columns: 1fr !important; } }`}</style>
+                  
+                  {hypothesisData.map((test) => (
+                    <div key={test.test_id} className="glass-card" style={{ padding: 20, borderLeft: `4px solid ${test.is_significant ? '#10B981' : '#F59E0B'}` }}>
+                      <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', color: 'var(--text-muted)', display: 'inline-block', marginBottom: 8 }}>
+                        {test.test_type} • {test.test_id}
+                      </span>
+                      <h4 style={{ margin: '0 0 6px', fontSize: 14, color: '#FFF' }}>{test.name}</h4>
+                      <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>{test.hypothesis}</p>
+                      
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, background: 'rgba(255,255,255,0.02)', padding: 10, borderRadius: 8, marginBottom: 14 }}>
+                        <div>
+                          <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>P-VALUE</span>
+                          <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: test.is_significant ? '#10B981' : '#FFF' }}>{test.p_value}</p>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>TEST METRIC</span>
+                          <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#FFF' }}>{test.metric_value}</p>
+                        </div>
+                      </div>
+
+                      <div style={{ marginBottom: 12 }}>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>BUSINESS INTERPRETATION</span>
+                        <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{test.business_interpretation}</p>
+                      </div>
+
+                      <div>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>RECOMMENDED ACTION</span>
+                        <p style={{ margin: '2px 0 0', fontSize: 12, color: '#FFF', fontWeight: 600 }}>{test.recommendation}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 4. KPI DRILLDOWN ENGINE */}
+            {activeModule === 3 && (
+              <div>
+                <RecruiterMetadata
+                  question="Where exactly are returns and losses concentrated within the product hierarchy?"
+                  formula="Return Rate = Returns / Orders"
+                  method="Recursive Category & Catalog Node Aggregation Tree"
+                  usecase="Zepto / Blinkit catalog managers identifying high-risk items"
+                  interpretation="Expand categories to drill down from total marketplace results down to single order level records."
+                />
+
+                <div className="glass-card" style={{ padding: 20 }}>
+                  <h3 style={{ margin: '0 0 16px', fontSize: 15, color: '#FFF' }}>Hierarchical Drilldown Matrix</h3>
+                  
+                  {/* Table headers */}
+                  <div style={{
+                    display: 'flex',
+                    padding: '10px 14px',
+                    borderBottom: '2px solid rgba(255,255,255,0.1)',
+                    fontWeight: 700,
+                    color: 'var(--text-muted)',
+                    fontSize: 12
+                  }}>
+                    <span style={{ flex: 1 }}>Catalog Hierarchy Node</span>
+                    <span style={{ width: 120, textAlign: 'right' }}>Revenue</span>
+                    <span style={{ width: 100, textAlign: 'right' }}>Total Orders</span>
+                    <span style={{ width: 100, textAlign: 'right' }}>Return Rate</span>
+                  </div>
+
+                  {drilldownData && <DrilldownNode node={drilldownData} />}
+                </div>
+              </div>
+            )}
+
+            {/* 5. ALERT MONITORING CENTER */}
+            {activeModule === 4 && (
+              <div>
+                <RecruiterMetadata
+                  question="Are there active return anomalies or SLA threshold failures?"
+                  formula="Trigger if Return Rate > 15% OR Risk score increase MoM > 20%"
+                  method="Real-Time SLA Rule-Based Operational Alerting Engine"
+                  usecase="Amazon / JPMorgan transactional monitoring & compliance control panels"
+                  interpretation="Urgent High alerts dictate immediate resource allocation. Resolved alerts indicate metrics returned to historical variance bounds."
+                />
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  {alertData.map((alert) => {
+                    const isHigh = alert.severity === 'High'
+                    const isMed = alert.severity === 'Medium'
+                    const isResolved = alert.status === 'Resolved'
+                    const alertColor = isResolved ? '#10B981' : isHigh ? '#EF4444' : '#F59E0B'
+                    return (
+                      <div key={alert.id} className="glass-card" style={{ padding: 18, borderLeft: `5px solid ${alertColor}` }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                          <span style={{
+                            fontSize: 11,
+                            fontWeight: 800,
+                            color: alertColor,
+                            background: `${alertColor}12`,
+                            border: `1px solid ${alertColor}33`,
+                            padding: '3px 8px',
+                            borderRadius: 4
+                          }}>
+                            {alert.severity.toUpperCase()} ALERT • {alert.alert_type}
+                          </span>
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Detected: {new Date(alert.timestamp).toLocaleTimeString()}</span>
+                        </div>
+
+                        <p style={{ margin: '0 0 12px', fontSize: 13, color: '#FFF', fontWeight: 600 }}>{alert.business_impact}</p>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr', gap: 16, background: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 8, fontSize: 12, marginBottom: 12 }}>
+                          <div>
+                            <span style={{ color: 'var(--text-muted)' }}>ESTIMATED COST</span>
+                            <p style={{ margin: '2px 0 0', fontWeight: 700, color: '#FFF' }}>{alert.estimated_cost > 0 ? formatCurrency(alert.estimated_cost) : '₹0 (Mitigated)'}</p>
+                          </div>
+                          <div>
+                            <span style={{ color: 'var(--text-muted)' }}>OWNER</span>
+                            <p style={{ margin: '2px 0 0', fontWeight: 700, color: '#FFF' }}>{alert.owner}</p>
+                          </div>
+                          <div>
+                            <span style={{ color: 'var(--text-muted)' }}>RECOMMENDED ACTION</span>
+                            <p style={{ margin: '2px 0 0', fontWeight: 600, color: 'var(--text-secondary)' }}>{alert.recommended_action}</p>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
+                          <span style={{ color: 'var(--text-muted)' }}>Alert ID: {alert.id}</span>
+                          <span style={{ color: alertColor, fontWeight: 700 }}>Status: {alert.status}</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* 6. DATA QUALITY COMMAND CENTER */}
+            {activeModule === 5 && (
+              <div>
+                <RecruiterMetadata
+                  question="Are data warehouse metrics fresh, complete and structurally sound?"
+                  formula="Completeness % = (Non-Null Cells / Total cells) * 100"
+                  method="Automated SQLite / Postgres Schema Integrity Auditing"
+                  usecase="JP Morgan credit transaction data warehouses & FAANG analytical database ingestion pipelines"
+                  interpretation="Quality score over 95% indicates pipeline integrity. Freshness updates below 30 min denote near real-time synchronization."
+                />
+
+                {dataQualityData && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 20 }} className="dq-grid">
+                    <style>{`@media (max-width: 900px) { .dq-grid { grid-template-columns: 1fr !important; } }`}</style>
+                    
+                    {/* Score and Completeness overview */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                      <div className="glass-card" style={{ padding: 20, display: 'flex', gap: 20, alignItems: 'center' }}>
+                        <div style={{
+                          width: 110, height: 110,
+                          borderRadius: '50%',
+                          border: '6px solid #10B981',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column'
+                        }}>
+                          <span style={{ fontSize: 24, fontWeight: 900, color: '#10B981' }}>{dataQualityData.overall_quality_score}%</span>
+                          <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>Score</span>
+                        </div>
+                        <div>
+                          <h3 style={{ margin: 0, fontSize: 16, color: '#FFF' }}>Warehouse Health Index</h3>
+                          <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>
+                            No null entries or type validation warnings detected on <strong>{dataQualityData.total_records}</strong> transactions.
+                          </p>
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginTop: 8 }}>
+                            Freshness: <strong>{dataQualityData.freshness_minutes} minutes ago</strong>
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="glass-card" style={{ padding: 20 }}>
+                        <h4 style={{ margin: '0 0 12px', fontSize: 14, color: '#FFF' }}>Quality Trend Index</h4>
+                        <div style={{ height: 180 }}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={dataQualityData.quality_trend}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                              <XAxis dataKey="date" />
+                              <YAxis domain={[90, 100]} />
+                              <Tooltip {...glassTooltipStyle} />
+                              <Line type="monotone" dataKey="score" stroke="#10B981" strokeWidth={3} dot={{ r: 4 }} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Null fields breakdown */}
+                    <div className="glass-card" style={{ padding: 20 }}>
+                      <h4 style={{ margin: '0 0 16px', fontSize: 14, color: '#FFF' }}>Null Variance Breakdown by Field</h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {Object.entries(dataQualityData.null_variance_breakdown).map(([field, count]) => (
+                          <div key={field} style={{ padding: 10, background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
+                              <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{field}</span>
+                              <span style={{ color: '#10B981', fontWeight: 700 }}>{count} Nulls</span>
+                            </div>
+                            <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' }}>
+                              <div style={{ width: '100%', height: '100%', background: '#10B981' }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 7. CUSTOMER & PRODUCT INTELLIGENCE (COHORT/RFM) */}
+            {activeModule === 6 && (
+              <div>
+                <RecruiterMetadata
+                  question="How are return risks distributed across customer segments and product price cohorts?"
+                  formula="CLV = Sum(Order Prices); Return Rate = Returns / Sales"
+                  method="Cohort Price Tier Matrix & RFM customer Segmentation"
+                  usecase="Amazon customer risk profiling & Blinkit supplier contract updates"
+                  interpretation="VIP Customers exhibit high monetary value and healthy return habits. Low/Budget clothing cohorts suffer from sizing return rates."
+                />
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }} className="marketplace-grid">
+                  <style>{`@media (max-width: 900px) { .marketplace-grid { grid-template-columns: 1fr !important; } }`}</style>
+                  
                   {/* RFM segmentations */}
                   <div className="glass-card" style={{ padding: 20 }}>
                     <h3 style={{ margin: '0 0 16px', fontSize: 14, color: '#FFF' }}>Customer RFM Segments</h3>
@@ -371,7 +746,7 @@ export default function Analytics() {
                     </ResponsiveContainer>
                   </div>
 
-                  {/* Retention matrix */}
+                  {/* High Risk customer accounts table */}
                   <div className="glass-card" style={{ padding: 20 }}>
                     <h3 style={{ margin: '0 0 16px', fontSize: 14, color: '#FFF' }}>High Risk Customer Accounts</h3>
                     <div style={{ overflowX: 'auto' }}>
@@ -388,7 +763,7 @@ export default function Analytics() {
                             <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                               <td style={{ padding: 8 }}>{r.customer_name}</td>
                               <td style={{ padding: 8, textAlign: 'right' }}>₹{r.monetary_value.toLocaleString()}</td>
-                              <td style={{ padding: 8, textAlign: 'right', color: r.customer_risk_score > 30 ? '#EF4444' : '#10B981' }}>
+                              <td style={{ padding: 8, textAlign: 'right', color: r.customer_risk_score > 30 ? '#EF4444' : '#10B981', fontWeight: 700 }}>
                                 {r.customer_risk_score.toFixed(1)}%
                               </td>
                             </tr>
@@ -398,20 +773,8 @@ export default function Analytics() {
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
 
-            {/* 3. PRODUCT INTELLIGENCE HUB */}
-            {activeModule === 2 && (
-              <div>
-                <RecruiterMetadata
-                  question="Which product categories and price brackets drive the highest return rates?"
-                  formula="Product Health Score = (1.0 - Return Rate) * 100"
-                  source="dim_product_analytics dimension attributes"
-                  interpretation="Filter items with health scores below 70 to target listing revision or description checks."
-                />
-
-                <div className="glass-card" style={{ padding: 24, marginBottom: 24 }}>
+                <div className="glass-card" style={{ padding: 24 }}>
                   <h3 style={{ margin: '0 0 16px', fontSize: 14, color: '#FFF' }}>Return Rates by Category & Price Tier Cohort</h3>
                   <ResponsiveContainer width="100%" height={260}>
                     <BarChart data={cohortData.slice(0, 12)}>
@@ -430,82 +793,14 @@ export default function Analytics() {
               </div>
             )}
 
-            {/* 4. SELLER INTELLIGENCE HUB */}
-            {activeModule === 3 && (
-              <div>
-                <RecruiterMetadata
-                  question="Which sellers pose the highest risk to return-related loss factors?"
-                  formula="Seller Risk Contribution = Seller Return count / System Return count"
-                  source="seller_analytics metadata tables"
-                  interpretation="Highlight vendors contributing to high customer complaints and low overall ratings."
-                />
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
-                  <div className="glass-card" style={{ padding: 20 }}>
-                    <h3 style={{ margin: '0 0 16px', fontSize: 14, color: '#FFF' }}>Top Returns Contributions by Merchant</h3>
-                    <div style={{ overflowX: 'auto' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-                        <thead>
-                          <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                            <th style={{ textAlign: 'left', padding: 8 }}>Merchant</th>
-                            <th style={{ textAlign: 'right', padding: 8 }}>Revenue Contribution</th>
-                            <th style={{ textAlign: 'right', padding: 8 }}>Risk Level</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {[
-                            { name: 'TechZone India Pvt Ltd', contribution: '28.4%', risk: 'High' },
-                            { name: 'FashionHub Retail', contribution: '22.1%', risk: 'Medium' },
-                            { name: 'ElectroKing Wholesale', contribution: '25.3%', risk: 'High' }
-                          ].map((s, i) => (
-                            <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                              <td style={{ padding: 8 }}>{s.name}</td>
-                              <td style={{ padding: 8, textAlign: 'right' }}>{s.contribution}</td>
-                              <td style={{ padding: 8, textAlign: 'right', color: s.risk === 'High' ? '#EF4444' : '#F59E0B' }}>
-                                {s.risk}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 5. OPERATIONAL INTELLIGENCE HUB */}
-            {activeModule === 4 && (
-              <div>
-                <RecruiterMetadata
-                  question="Which products represent the highest cumulative share of returns?"
-                  formula="Pareto Rule: Count(returns) accumulated sum sorted descending"
-                  source="fact_returns joined with dim_product_analytics"
-                  interpretation="Identify the top few products driving 80% of return losses."
-                />
-
-                <div className="glass-card" style={{ padding: 24, marginBottom: 24 }}>
-                  <h3 style={{ margin: '0 0 16px', fontSize: 14, color: '#FFF' }}>Pareto Analysis: Returns Drivers distribution</h3>
-                  <ResponsiveContainer width="100%" height={260}>
-                    <BarChart data={paretoData?.top_drivers?.slice(0, 10) || []}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                      <XAxis dataKey="product_name" tick={{ fontSize: 9 }} />
-                      <YAxis />
-                      <Tooltip {...glassTooltipStyle} />
-                      <Bar dataKey="total_returns" fill="var(--accent-primary)" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            )}
-
-            {/* 6. REVENUE IMPACT SIMULATOR */}
-            {activeModule === 5 && (
+            {/* 8. REVENUE IMPACT SIMULATOR */}
+            {activeModule === 7 && (
               <div>
                 <RecruiterMetadata
                   question="What is the expected savings from improvements in description or image parameters?"
                   formula="Impact reduction = (quality / 10) * Coefficient * Base Rate"
-                  source="Analytics calculator simulator math models"
+                  method="Analytics calculator simulator math models"
+                  usecase="Zepto / Blinkit catalog optimization planning before deployment"
                   interpretation="Simulate ROI before executing listing updates in product catalogs."
                 />
 
@@ -571,13 +866,14 @@ export default function Analytics() {
               </div>
             )}
 
-            {/* 7. TIME SERIES FORECASTING HUB */}
-            {activeModule === 6 && (
+            {/* 9. TIME SERIES FORECASTING HUB */}
+            {activeModule === 8 && (
               <div>
                 <RecruiterMetadata
                   question="What are the predicted trends for return rate, revenue, refunds and complaints?"
                   formula="Holt-Winters Exponential Smoothing additive trend models fitting dynamic historical baselines"
-                  source="TimeSeriesForecaster wrapper service built with statsmodels library"
+                  method="Double/Triple Exponential Smoothing Forecaster (statsmodels library)"
+                  usecase="JP Morgan financial planning & Blinkit stock replenishments forecasts"
                   interpretation="Dotted line outlines point forecasts for subsequent 15 days, shaded boundary illustrates 95% statistical confidence intervals."
                 />
 
@@ -688,35 +984,6 @@ export default function Analytics() {
                     </div>
                   </div>
                 ) : null}
-              </div>
-            )}
-
-            {/* 8. INSIGHT RECOMMENDATION CENTER */}
-            {activeModule === 7 && (
-              <div>
-                <RecruiterMetadata
-                  question="What operational steps should be taken next to reduce returns?"
-                  formula="Opportunity impact calculations derived from group return costs"
-                  source="SQL analytical facts and feature weights"
-                  interpretation="Prioritize cards based on potential financial savings."
-                />
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                  {[
-                    { type: 'Critical', msg: 'Electronics category represents 34% of return losses.', action: 'Improve spec sheets and clear description fields.', impact: '₹14.8L expected savings' },
-                    { type: 'High', msg: 'Wrong Sizing issues account for 22% of Clothing returns.', action: 'Deploy clear sizing guides and metric tables.', impact: '₹9.4L expected savings' },
-                    { type: 'Medium', msg: 'Merchant review ratings dropped on Footwear collections.', action: 'Conduct quality control check on local supplier base.', impact: '₹4.2L expected savings' }
-                  ].map((rec, idx) => (
-                    <div key={idx} className="glass-card" style={{ padding: 20, borderLeft: `4px solid ${rec.type === 'Critical' ? '#EF4444' : rec.type === 'High' ? '#F59E0B' : '#8B5CF6'}` }}>
-                      <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 6px', borderRadius: 4, background: 'rgba(255,255,255,0.08)', color: '#FFF', display: 'inline-block', marginBottom: 8 }}>
-                        {rec.type.toUpperCase()}
-                      </span>
-                      <p style={{ margin: '0 0 10px', fontSize: 13, color: '#FFF', fontWeight: 600 }}>{rec.msg}</p>
-                      <p style={{ margin: '0 0 14px', fontSize: 12, color: 'var(--text-secondary)' }}><b>Action:</b> {rec.action}</p>
-                      <p style={{ margin: 0, fontSize: 12, color: '#10B981', fontWeight: 700 }}>{rec.impact}</p>
-                    </div>
-                  ))}
-                </div>
               </div>
             )}
           </motion.div>

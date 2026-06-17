@@ -271,10 +271,74 @@ async def get_forecast(metric: str = "return_rate") -> MetricForecastResponse:
     
     res = TimeSeriesForecaster.forecast_metric(metric, historical_baseline, steps=15)
     return MetricForecastResponse(**res)
+@router.get("/experiments")
+async def get_experiments() -> List[Dict[str, Any]]:
+    """A/B Testing and Controlled Experiments."""
+    db_conn = _get_populated_analytics_db()
+    try:
+        from app.utils.experimentation_engine import ExperimentationLab
+        return ExperimentationLab.get_experiments(db_conn)
+    finally:
+        db_conn.close()
 
+
+@router.get("/hypotheses")
+async def get_hypotheses() -> List[Dict[str, Any]]:
+    """Hypothesis Testing Hub."""
+    db_conn = _get_populated_analytics_db()
+    try:
+        from app.utils.experimentation_engine import HypothesisTestingHub
+        return HypothesisTestingHub.run_tests(db_conn)
+    finally:
+        db_conn.close()
+
+
+@router.get("/scorecards")
+async def get_scorecards() -> List[Dict[str, Any]]:
+    """Executive scorecards for MBR."""
+    db_conn = _get_populated_analytics_db()
+    try:
+        from app.utils.experimentation_engine import ExecutiveScorecard
+        return ExecutiveScorecard.get_scorecards(db_conn)
+    finally:
+        db_conn.close()
+
+
+@router.get("/drilldown")
+async def get_drilldown() -> Dict[str, Any]:
+    """KPI drilldown hierarchical tree."""
+    db_conn = _get_populated_analytics_db()
+    try:
+        from app.utils.experimentation_engine import KPIHierarchyDrilldown
+        return KPIHierarchyDrilldown.get_drilldown(db_conn)
+    finally:
+        db_conn.close()
+
+
+@router.get("/alerts")
+async def get_alerts() -> List[Dict[str, Any]]:
+    """Alerts and anomalies monitoring panel."""
+    db_conn = _get_populated_analytics_db()
+    try:
+        from app.utils.experimentation_engine import AlertMonitoringCenter
+        return AlertMonitoringCenter.scan_for_alerts(db_conn)
+    finally:
+        db_conn.close()
+
+
+@router.get("/dataquality")
+async def get_dataquality() -> Dict[str, Any]:
+    """Data Quality Command Center metrics."""
+    db_conn = _get_populated_analytics_db()
+    try:
+        from app.utils.experimentation_engine import DataQualityCommandCenter
+        return DataQualityCommandCenter.audit_warehouse(db_conn)
+    finally:
+        db_conn.close()
 
 
 # ---------------------------------------------------------------------------
+
 # Internal helpers
 
 # ---------------------------------------------------------------------------

@@ -43,6 +43,15 @@ export const getSQLPareto = () => api.get('/analytics/pareto')
 export const getForecast = (params) => api.get('/analytics/forecast', { params })
 export const getOrderSHAP = (id) => api.get(`/orders/${id}/explain`)
 
+// Decision Intelligence Upgrades
+export const getExperiments = () => api.get('/analytics/experiments')
+export const getHypotheses = () => api.get('/analytics/hypotheses')
+export const getScorecards = () => api.get('/analytics/scorecards')
+export const getDrilldown = () => api.get('/analytics/drilldown')
+export const getAlerts = () => api.get('/analytics/alerts')
+export const getDataQuality = () => api.get('/analytics/dataquality')
+
+
 
 
 // Upload
