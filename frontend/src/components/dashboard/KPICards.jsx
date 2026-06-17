@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
 import { TrendingUp, TrendingDown, ShoppingCart, RefreshCw, AlertCircle, Shield } from 'lucide-react'
 import { useDashboardStore } from '../../store/dashboardStore'
+import { useIndustryStore } from '../../store/industryStore'
 import { formatCurrency, formatNumber, generateSparkline, animateCounter } from '../../utils/helpers'
 
 const sparkDataSets = {
@@ -153,54 +154,40 @@ function KPICard({ title, rawValue, formatted, trend, trendGoodDown, sparkData, 
 }
 
 export default function KPICards() {
-  const { kpis } = useDashboardStore()
+  const { activeIndustry, getIndustryData } = useIndustryStore()
+  const indData = getIndustryData(activeIndustry)
 
-  const cards = [
-    {
-      title: 'Total Orders',
-      rawValue: kpis.total_orders,
-      formatted: (v) => formatNumber(v),
-      trend: kpis.trend_total_orders,
-      trendGoodDown: false,
-      sparkData: sparkDataSets.total_orders,
-      icon: ShoppingCart,
-      color: '#3B82F6',
-      delay: 0,
-    },
-    {
-      title: 'Return Rate',
-      rawValue: Math.round(kpis.return_rate * 10),
-      formatted: (v) => `${(v / 10).toFixed(1)}%`,
-      trend: kpis.trend_return_rate,
-      trendGoodDown: true,
-      sparkData: sparkDataSets.return_rate,
-      icon: RefreshCw,
-      color: '#EF4444',
-      delay: 0.08,
-    },
-    {
-      title: 'Revenue at Risk',
-      rawValue: kpis.revenue_at_risk,
-      formatted: (v) => formatCurrency(v),
-      trend: kpis.trend_revenue_at_risk,
-      trendGoodDown: true,
-      sparkData: sparkDataSets.revenue_at_risk,
-      icon: AlertCircle,
-      color: '#F97316',
-      delay: 0.16,
-    },
-    {
-      title: 'Returns Prevented',
-      rawValue: kpis.returns_prevented,
-      formatted: (v) => formatNumber(v),
-      trend: kpis.trend_returns_prevented,
-      trendGoodDown: false,
-      sparkData: sparkDataSets.returns_prevented,
-      icon: Shield,
-      color: '#10B981',
-      delay: 0.24,
-    },
-  ]
+  const iconMapping = {
+    ShoppingCart: ShoppingCart,
+    RefreshCw: RefreshCw,
+    AlertCircle: AlertCircle,
+    Shield: Shield
+  }
+
+  const kpiKeys = ['total_orders', 'return_rate', 'revenue_at_risk', 'returns_prevented']
+  const delays = [0, 0.08, 0.16, 0.24]
+  const sparkKeys = ['total_orders', 'return_rate', 'revenue_at_risk', 'returns_prevented']
+
+  const cards = kpiKeys.map((key, idx) => {
+    const kpiInfo = indData.kpis[key]
+    const Icon = iconMapping[kpiInfo.icon] || Shield
+
+    return {
+      title: kpiInfo.title,
+      rawValue: key === 'return_rate' ? Math.round(kpiInfo.rawValue * 10) : kpiInfo.rawValue,
+      formatted: (v) => {
+        if (kpiInfo.format === 'currency') return formatCurrency(v)
+        if (kpiInfo.format === 'percentage') return `${(v / 10).toFixed(1)}%`
+        return formatNumber(v)
+      },
+      trend: kpiInfo.trend,
+      trendGoodDown: kpiInfo.trendGoodDown,
+      sparkData: sparkDataSets[sparkKeys[idx]],
+      icon: Icon,
+      color: kpiInfo.color,
+      delay: delays[idx]
+    }
+  })
 
   return (
     <div style={{

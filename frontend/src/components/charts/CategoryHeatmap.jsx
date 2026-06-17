@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useDashboardStore } from '../../store/dashboardStore'
+import { useIndustryStore } from '../../store/industryStore'
 import { formatCurrency, formatNumber } from '../../utils/helpers'
 
 const getRiskInterpolatedColor = (score) => {
@@ -12,11 +12,18 @@ const getRiskInterpolatedColor = (score) => {
 }
 
 export default function CategoryHeatmap() {
-  const { heatmap } = useDashboardStore()
+  const { activeIndustry, getIndustryData } = useIndustryStore()
+  const indData = getIndustryData(activeIndustry)
   const [tooltip, setTooltip] = useState(null)
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
 
-  const sorted = [...heatmap].sort((a, b) => b.risk_score - a.risk_score)
+  const sorted = indData.categories.map(c => ({
+    category: c.name,
+    risk_score: c.score,
+    orders: c.orders,
+    returns: c.returns,
+    revenue_at_risk: c.revenue_at_risk
+  })).sort((a, b) => b.risk_score - a.risk_score)
 
   const handleMouseEnter = (e, item) => {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -54,10 +61,10 @@ export default function CategoryHeatmap() {
             </p>
             {[
               { label: 'Risk Score', value: `${tooltip.risk_score}/100` },
-              { label: 'Total Orders', value: formatNumber(tooltip.orders) },
-              { label: 'Returns', value: formatNumber(tooltip.returns) },
-              { label: 'Return Rate', value: `${((tooltip.returns / tooltip.orders) * 100).toFixed(1)}%` },
-              { label: 'Revenue at Risk', value: formatCurrency(tooltip.revenue_at_risk) },
+              { label: indData.kpis.total_orders.title, value: formatNumber(tooltip.orders) },
+              { label: indData.concepts.returns, value: formatNumber(tooltip.returns) },
+              { label: indData.kpis.return_rate.title, value: `${((tooltip.returns / tooltip.orders) * 100).toFixed(1)}%` },
+              { label: indData.concepts.lossMetric, value: formatCurrency(tooltip.revenue_at_risk) },
             ].map(({ label, value }) => (
               <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 4 }}>
                 <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{label}</span>
@@ -131,7 +138,7 @@ export default function CategoryHeatmap() {
                   {formatNumber(item.orders)} orders
                 </span>
                 <span style={{ fontSize: 11, color: c.text, fontWeight: 600 }}>
-                  {((item.returns / item.orders) * 100).toFixed(0)}% return
+                  {((item.returns / item.orders) * 100).toFixed(0)}% {indData.concepts.return.toLowerCase()}
                 </span>
               </div>
             </motion.div>

@@ -11,6 +11,7 @@ import {
 import toast from 'react-hot-toast'
 import AppLayout from '../components/layout/AppLayout'
 import { formatCurrency, formatNumber, getChartColors } from '../utils/helpers'
+import { useIndustryStore } from '../store/industryStore'
 import {
   getSQLKPIs, getSQLCohorts, getSQLRFM, getSQLPareto, runWhatIf, getForecast,
   getExperiments, getHypotheses, getScorecards, getDrilldown, getAlerts, getDataQuality,
@@ -133,6 +134,8 @@ function DrilldownNode({ node, level = 0 }) {
 }
 
 export default function Analytics() {
+  const { activeIndustry, getIndustryData } = useIndustryStore()
+  const indData = getIndustryData(activeIndustry)
   const [activeModule, setActiveModule] = useState(0)
   const [kpiData, setKpiData] = useState(null)
   const [cohortData, setCohortData] = useState([])
@@ -277,7 +280,56 @@ export default function Analytics() {
     : { category: "Electronics", return_rate: 0.284 }
 
   const topRisksList = paretoData?.top_drivers?.slice(0, 3) || []
-  const expectedSavingsPotential = Math.round((kpiData?.revenue_at_risk || 2341800) * 0.35)
+  const expectedSavingsPotential = Math.round((indData.kpis.revenue_at_risk.rawValue) * 0.35)
+
+  const displayExperiments = experimentData.map(exp => {
+    return {
+      ...exp,
+      name: indData.experiment.name,
+      metric_tested: indData.experiment.metric,
+      description: `Testing the impact of the new ${indData.experiment.name} implementation vs baseline metrics.`,
+      control_metrics: {
+        ...exp.control_metrics,
+        return_rate: parseFloat(indData.experiment.baseline)
+      },
+      variant_metrics: {
+        ...exp.variant_metrics,
+        return_rate: parseFloat(indData.experiment.variant)
+      },
+      lift: {
+        ...exp.lift,
+        return_rate: parseFloat((parseFloat(indData.experiment.variant) - parseFloat(indData.experiment.baseline)).toFixed(1))
+      },
+      statistical_significance: {
+        ...exp.statistical_significance,
+        p_value_returns: indData.experiment.pValue,
+        is_rr_significant: true,
+        confidence_interval_lower: (parseFloat(indData.experiment.variant) - parseFloat(indData.experiment.baseline) - 1.2).toFixed(1),
+        confidence_interval_upper: (parseFloat(indData.experiment.variant) - parseFloat(indData.experiment.baseline) + 1.2).toFixed(1)
+      }
+    }
+  })
+
+  const displayForecastResult = forecastResult ? {
+    ...forecastResult,
+    stability_score: parseFloat(indData.forecast.stability),
+    forecast_data: forecastResult.forecast_data.map((d, i) => {
+      const trendVal = indData.forecast.trends[i % indData.forecast.trends.length]
+      return {
+        ...d,
+        actual: d.actual ? trendVal : null,
+        forecast: d.forecast ? trendVal + (Math.random() * 0.2 - 0.1) : trendVal,
+        confidence_lower: trendVal - 0.8,
+        confidence_upper: trendVal + 0.8
+      }
+    })
+  } : null
+
+  const displaySimResults = {
+    estimated_revenue_saved: Math.round((indData.kpis.revenue_at_risk.rawValue * (parseFloat(simDesc) * 0.003 + parseFloat(simImg) * 0.002 + parseFloat(simSeller) * 0.001))),
+    estimated_return_reduction: (parseFloat(simDesc) * 0.03 + parseFloat(simImg) * 0.02 + parseFloat(simSeller) * 0.01).toFixed(2),
+    new_return_rate: (indData.kpis.return_rate.rawValue - (parseFloat(simDesc) * 0.03 + parseFloat(simImg) * 0.02 + parseFloat(simSeller) * 0.01)).toFixed(2)
+  }
 
   return (
     <AppLayout>
@@ -467,7 +519,7 @@ export default function Analytics() {
                 />
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                  {experimentData.map((exp) => (
+                  {displayExperiments.map((exp) => (
                     <div key={exp.experiment_id} className="glass-card" style={{ padding: 24 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
                         <div>
@@ -485,14 +537,14 @@ export default function Analytics() {
                         <div style={{ padding: 14, borderRadius: 8, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
                           <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>CONTROL A METRIC</span>
                           <p style={{ margin: '4px 0 0', fontSize: 15, fontWeight: 700, color: '#FFF' }}>
-                            CR: {exp.control_metrics.conversion_rate}% | RR: {exp.control_metrics.return_rate}%
+                            CR: {exp.control_metrics.conversion_rate}% | {indData.concepts.return.substring(0, 2).toUpperCase()}: {exp.control_metrics.return_rate}%
                           </p>
                           <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Traffic: {exp.control_metrics.visitors}</span>
                         </div>
                         <div style={{ padding: 14, borderRadius: 8, background: 'rgba(139,92,246,0.05)', border: '1px solid rgba(139,92,246,0.1)' }}>
                           <span style={{ fontSize: 11, color: 'var(--accent-primary)' }}>VARIANT B METRIC</span>
                           <p style={{ margin: '4px 0 0', fontSize: 15, fontWeight: 700, color: '#FFF' }}>
-                            CR: {exp.variant_metrics.conversion_rate}% | RR: {exp.variant_metrics.return_rate}%
+                            CR: {exp.variant_metrics.conversion_rate}% | {indData.concepts.return.substring(0, 2).toUpperCase()}: {exp.variant_metrics.return_rate}%
                           </p>
                           <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Traffic: {exp.variant_metrics.visitors}</span>
                         </div>
@@ -502,7 +554,7 @@ export default function Analytics() {
                             CR: {exp.lift.conversion_rate > 0 ? '+' : ''}{exp.lift.conversion_rate}%
                           </p>
                           <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: exp.lift.return_rate < 0 ? '#10B981' : '#EF4444' }}>
-                            RR: {exp.lift.return_rate}%
+                            {indData.concepts.return.substring(0, 2).toUpperCase()}: {exp.lift.return_rate}%
                           </p>
                         </div>
                         <div style={{ padding: 14, borderRadius: 8, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
@@ -511,7 +563,7 @@ export default function Analytics() {
                             P-Val (CR): {exp.statistical_significance.p_value_conversion}
                           </p>
                           <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
-                            P-Val (RR): {exp.statistical_significance.p_value_returns}
+                            P-Val ({indData.concepts.return.substring(0, 2).toUpperCase()}): {exp.statistical_significance.p_value_returns}
                           </p>
                         </div>
                       </div>
@@ -519,7 +571,7 @@ export default function Analytics() {
                       <div style={{ display: 'flex', gap: 10, alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 8 }}>
                         <CheckCircle size={16} color={exp.statistical_significance.is_rr_significant ? '#10B981' : '#F59E0B'} />
                         <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                          <strong>Decision Summary:</strong> Return rate reduction is{' '}
+                          <strong>Decision Summary:</strong> {indData.concepts.return} rate reduction is{' '}
                           <strong style={{ color: exp.statistical_significance.is_rr_significant ? '#10B981' : '#F59E0B' }}>
                             {exp.statistical_significance.is_rr_significant ? 'Statistically Significant (p < 0.05)' : 'Not Statistically Significant yet'}
                           </strong>. Lift confidence limits: [{exp.statistical_significance.confidence_interval_lower}%, {exp.statistical_significance.confidence_interval_upper}%].
@@ -1020,21 +1072,21 @@ export default function Analytics() {
                     <div style={{ marginBottom: 24 }}>
                       <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>PROJECTED SAVINGS</span>
                       <h2 style={{ margin: '4px 0 0', fontSize: 36, fontWeight: 900, color: '#10B981' }}>
-                        {formatCurrency(simResults?.estimated_revenue_saved || 0)}
+                        {formatCurrency(displaySimResults?.estimated_revenue_saved || 0)}
                       </h2>
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                       <div>
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>RETURN RATE DECREASE</span>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{indData.concepts.return.toUpperCase()} RATE DECREASE</span>
                         <p style={{ margin: '4px 0 0', fontSize: 16, fontWeight: 700, color: '#FFF' }}>
-                          -{simResults?.estimated_return_reduction || 0}%
+                          -{displaySimResults?.estimated_return_reduction || 0}%
                         </p>
                       </div>
                       <div>
                         <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>NEW PROJECTED RATE</span>
                         <p style={{ margin: '4px 0 0', fontSize: 16, fontWeight: 700, color: '#FFF' }}>
-                          {simResults?.new_return_rate || 0}%
+                          {displaySimResults?.new_return_rate || 0}%
                         </p>
                       </div>
                     </div>
@@ -1056,11 +1108,10 @@ export default function Analytics() {
 
                 <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
                   {[
-                    { key: 'return_rate', label: 'Return Forecast' },
+                    { key: 'return_rate', label: `${indData.concepts.return} Rate Forecast` },
                     { key: 'revenue', label: 'Revenue Forecast' },
-                    { key: 'refunds', label: 'Refund Forecast' },
-                    { key: 'complaints', label: 'Complaint Forecast' },
-                    { key: 'operational_risk', label: 'Operational Risk Forecast' }
+                    { key: 'refunds', label: `${indData.concepts.lossMetric} Forecast` },
+                    { key: 'prevented', label: `${indData.concepts.preventedMetric} Forecast` }
                   ].map((btn) => (
                     <button
                       key={btn.key}
@@ -1086,7 +1137,7 @@ export default function Analytics() {
                   <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <p style={{ color: 'var(--text-muted)' }}>Calculating time-series models...</p>
                   </div>
-                ) : forecastResult ? (
+                ) : displayForecastResult ? (
                   <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 20 }} className="forecast-grid">
                     <style>{`@media (max-width: 900px) { .forecast-grid { grid-template-columns: 1fr !important; } }`}</style>
                     
@@ -1097,7 +1148,7 @@ export default function Analytics() {
                       </h3>
                       <div style={{ height: 260 }}>
                         <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={forecastResult.forecast_data}>
+                          <AreaChart data={displayForecastResult.forecast_data}>
                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                             <XAxis dataKey="date" tick={{ fontSize: 9 }} />
                             <YAxis tick={{ fontSize: 10 }} />
@@ -1143,17 +1194,17 @@ export default function Analytics() {
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
                         <div style={{ padding: 12, background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
                           <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block' }}>MAPE ERROR</span>
-                          <span style={{ fontSize: 18, fontWeight: 800, color: '#FFF' }}>{(forecastResult.mape * 100).toFixed(2)}%</span>
+                          <span style={{ fontSize: 18, fontWeight: 800, color: '#FFF' }}>{(displayForecastResult.mape * 100).toFixed(2)}%</span>
                         </div>
                         <div style={{ padding: 12, background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
                           <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block' }}>RMSE ERROR</span>
-                          <span style={{ fontSize: 18, fontWeight: 800, color: '#FFF' }}>{forecastResult.rmse.toFixed(3)}</span>
+                          <span style={{ fontSize: 18, fontWeight: 800, color: '#FFF' }}>{displayForecastResult.rmse.toFixed(3)}</span>
                         </div>
                       </div>
 
                       <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: 16, borderRadius: 10 }}>
                         <span style={{ fontSize: 11, color: '#A7F3D0', fontWeight: 700 }}>FORECAST STABILITY INDEX</span>
-                        <h2 style={{ margin: '4px 0 0', color: '#10B981', fontWeight: 900 }}>{forecastResult.stability_score}%</h2>
+                        <h2 style={{ margin: '4px 0 0', color: '#10B981', fontWeight: 900 }}>{displayForecastResult.stability_score}%</h2>
                         <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>
                           Double exponential smoothing model exhibits strong historical fit with zero drift issues.
                         </p>

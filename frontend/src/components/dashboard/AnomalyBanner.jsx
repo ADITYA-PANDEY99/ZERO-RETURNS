@@ -2,10 +2,18 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { AlertTriangle, X, Search, Zap } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useDashboardStore } from '../../store/dashboardStore'
+import { useIndustryStore } from '../../store/industryStore'
 
 export default function AnomalyBanner() {
-  const { anomaly, dismissAnomaly } = useDashboardStore()
+  const { anomaly: dashboardAnomaly, dismissAnomaly } = useDashboardStore()
+  const { activeIndustry, getIndustryData } = useIndustryStore()
+  const indData = getIndustryData(activeIndustry)
   const navigate = useNavigate()
+
+  const anomaly = dashboardAnomaly && dashboardAnomaly.active ? {
+    ...dashboardAnomaly,
+    message: indData.anomaly?.message || dashboardAnomaly.message
+  } : null
 
   return (
     <AnimatePresence>

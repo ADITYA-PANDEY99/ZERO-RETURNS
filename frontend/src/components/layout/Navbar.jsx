@@ -5,14 +5,18 @@ import ThemeSwitcher from '../features/ThemeSwitcher'
 import LanguageSwitcher from '../features/LanguageSwitcher'
 import { useDashboardStore } from '../../store/dashboardStore'
 import { useVoiceCommand } from '../../hooks/useVoiceCommand'
+import { useIndustryStore, INDUSTRIES } from '../../store/industryStore'
+import { Globe } from 'lucide-react'
 
 export default function Navbar({ onMenuClick }) {
   const [searchOpen, setSearchOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [industryOpen, setIndustryOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const { orders } = useDashboardStore()
   const { isListening, toggleListening } = useVoiceCommand()
+  const { activeIndustry, setIndustry } = useIndustryStore()
 
   const searchResults = searchQuery.length > 1
     ? orders.filter(o =>
@@ -107,7 +111,80 @@ export default function Navbar({ onMenuClick }) {
       </div>
 
       {/* Right side actions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+        
+        {/* Industry Switcher Dropdown */}
+        <div style={{ position: 'relative' }}>
+          <button
+            className="btn btn-ghost btn-sm tooltip-container"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 12px',
+              borderRadius: 8,
+              background: 'var(--glass-bg)',
+              border: '1px solid var(--glass-border)',
+              color: 'var(--text-primary)',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              cursor: 'pointer'
+            }}
+            onClick={() => setIndustryOpen(!industryOpen)}
+          >
+            <span>{INDUSTRIES[activeIndustry]?.icon}</span>
+            <span style={{ fontSize: '0.82rem' }}>{INDUSTRIES[activeIndustry]?.name}</span>
+            <span className="tooltip">Switch Industry Mode</span>
+          </button>
+
+          <AnimatePresence>
+            {industryOpen && (
+              <>
+                <div style={{ position: 'fixed', inset: 0, zIndex: 998 }} onClick={() => setIndustryOpen(false)} />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9, y: -8 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: -8 }}
+                  style={{
+                    position: 'absolute', right: 0, top: 'calc(100% + 10px)', zIndex: 999,
+                    background: 'var(--bg-secondary)', border: '1px solid var(--glass-border)',
+                    borderRadius: 14, padding: 8, width: 230, boxShadow: 'var(--card-shadow)',
+                    backdropFilter: 'blur(20px)',
+                  }}
+                >
+                  <div style={{ padding: '4px 10px 8px', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    Industry Domain
+                  </div>
+                  {Object.values(INDUSTRIES).map(ind => (
+                    <button
+                      key={ind.id}
+                      onClick={() => {
+                        setIndustry(ind.id)
+                        setIndustryOpen(false)
+                      }}
+                      style={{
+                        display: 'flex', width: '100%', padding: '8px 10px', borderRadius: 10,
+                        border: 'none', background: activeIndustry === ind.id ? 'rgba(139,92,246,0.1)' : 'transparent',
+                        color: activeIndustry === ind.id ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                        alignItems: 'center', gap: 10,
+                        fontSize: '0.82rem', cursor: 'pointer', transition: 'all 0.15s', marginTop: 2,
+                        fontWeight: activeIndustry === ind.id ? 700 : 500,
+                        textAlign: 'left'
+                      }}
+                    >
+                      <span style={{ fontSize: '1.1rem' }}>{ind.icon}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ color: activeIndustry === ind.id ? 'var(--accent-primary)' : '#FFF' }}>{ind.name}</div>
+                        <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 400 }}>{ind.companyExample}</div>
+                      </div>
+                    </button>
+                  ))}
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </div>
+
         <LanguageSwitcher />
         <ThemeSwitcher />
 

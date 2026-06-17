@@ -8,9 +8,12 @@ import AnomalyBanner from '../components/dashboard/AnomalyBanner'
 import ReturnTrendChart from '../components/charts/ReturnTrendChart'
 import CategoryHeatmap from '../components/charts/CategoryHeatmap'
 import DraggableGrid from '../components/dashboard/DraggableGrid'
+import { useIndustryStore } from '../store/industryStore'
 
 export default function Dashboard() {
   const [isDraggable, setIsDraggable] = useState(false)
+  const { activeIndustry, getIndustryData } = useIndustryStore()
+  const indData = getIndustryData(activeIndustry)
 
   return (
     <AppLayout>
@@ -37,7 +40,7 @@ export default function Dashboard() {
                 Dashboard
               </h1>
               <p style={{ margin: '4px 0 0', fontSize: 14, color: 'var(--text-muted)' }}>
-                Real-time return risk intelligence — {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                Real-time {indData.concepts.return.toLowerCase()} risk intelligence — {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
               </p>
             </div>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -134,19 +137,10 @@ export default function Dashboard() {
                   Category Risk Snapshot
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {[
-                    { category: 'Electronics', score: 82, color: '#EF4444' },
-                    { category: 'Clothing', score: 74, color: '#F97316' },
-                    { category: 'Footwear', score: 68, color: '#F97316' },
-                    { category: 'Toys', score: 61, color: '#F59E0B' },
-                    { category: 'Sports', score: 48, color: '#F59E0B' },
-                    { category: 'Beauty', score: 45, color: '#10B981' },
-                    { category: 'Home & Kitchen', score: 55, color: '#F59E0B' },
-                    { category: 'Books', score: 22, color: '#10B981' },
-                  ].map((item) => (
-                    <div key={item.category}>
+                  {indData.categories.map((item) => (
+                    <div key={item.name}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                        <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{item.category}</span>
+                        <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{item.name}</span>
                         <span style={{ fontSize: 12, fontWeight: 700, color: item.color }}>{item.score}</span>
                       </div>
                       <div style={{ height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>

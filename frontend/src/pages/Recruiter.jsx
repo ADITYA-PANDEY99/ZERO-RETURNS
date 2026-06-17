@@ -225,15 +225,21 @@ ORDER BY total_returns DESC;`,
               </div>
 
               <div className="glass-card" style={{ padding: 24, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <h3 style={{ margin: '0 0 16px', fontSize: 16, color: '#FFF' }}>Target Alignment</h3>
+                <h3 style={{ margin: '0 0 16px', fontSize: 16, color: '#FFF' }}>Target Alignment & Adaptability</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   <div>
                     <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>SUPPORTED INDUSTRIES</span>
                     <div style={{ display: 'flex', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
-                      {['E-commerce Marketplaces', 'D2C Retail', 'Supply Chain & Logistics', 'Fintech Credit Risk'].map((ind) => (
+                      {['E-commerce (Amazon)', 'Food Delivery (Zomato)', 'Grocery Delivery (Blinkit)', 'Banking (AmEx)', 'SaaS (Salesforce)'].map((ind) => (
                         <span key={ind} style={{ fontSize: 11, padding: '4px 10px', background: 'rgba(255,255,255,0.04)', borderRadius: 6, color: '#FFF', border: '1px solid rgba(255,255,255,0.08)' }}>{ind}</span>
                       ))}
                     </div>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>CROSS-DOMAIN CAPABILITY</span>
+                    <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                      Reuses the same underlying data warehouse schema to adapt instantly to 5 distinct industry domains without changing backend database code, translating return metrics into cancellations, complaints, and churn.
+                    </p>
                   </div>
                   <div>
                     <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>TARGET CANDIDATE ROLES</span>
