@@ -32,6 +32,18 @@ const THEMES = {
     emoji: '🔥',
     description: 'Dark charcoal + Orange/Red',
   },
+  'neo-corporate': {
+    id: 'neo-corporate',
+    name: 'Neo Corporate',
+    emoji: '🏢',
+    description: 'Steel blue + Charcoal',
+  },
+  'midnight-finance': {
+    id: 'midnight-finance',
+    name: 'Midnight Finance',
+    emoji: '📈',
+    description: 'Deep navy + Gold & Emerald',
+  },
 }
 
 export const useThemeStore = create(

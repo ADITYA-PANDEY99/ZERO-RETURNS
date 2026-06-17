@@ -116,6 +116,7 @@ export default function Navbar({ onMenuClick }) {
         {/* Industry Switcher Dropdown */}
         <div style={{ position: 'relative' }}>
           <button
+            id="industry-switcher-btn"
             className="btn btn-ghost btn-sm tooltip-container"
             style={{
               display: 'flex',

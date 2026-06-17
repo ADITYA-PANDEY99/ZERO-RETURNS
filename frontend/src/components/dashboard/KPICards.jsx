@@ -5,6 +5,7 @@ import { TrendingUp, TrendingDown, ShoppingCart, RefreshCw, AlertCircle, Shield 
 import { useDashboardStore } from '../../store/dashboardStore'
 import { useIndustryStore } from '../../store/industryStore'
 import { formatCurrency, formatNumber, generateSparkline, animateCounter } from '../../utils/helpers'
+import SmartTooltip from '../features/SmartTooltip'
 
 const sparkDataSets = {
   total_orders: generateSparkline(12, 280, 500),
@@ -13,7 +14,42 @@ const sparkDataSets = {
   returns_prevented: generateSparkline(12, 1200, 2400),
 }
 
-function KPICard({ title, rawValue, formatted, trend, trendGoodDown, sparkData, icon: Icon, color, delay }) {
+const tooltipDetails = {
+  total_orders: {
+    title: 'Total Volume / Orders',
+    meaning: 'The sum of all successful transactions processed in the active system window.',
+    whyItMatters: 'Establishes the performance baseline for business scale and operation capacity.',
+    formula: 'Total Orders Count = sum(Individual success transactions)',
+    businessUse: 'Determines resource allocation, server scaling, and logistics demand.',
+    simpleExplanation: 'Total number of orders successfully placed by your customers.'
+  },
+  return_rate: {
+    title: 'Return/Cancellation Rate',
+    meaning: 'The percentage of orders that are canceled or returned by customers post-delivery.',
+    whyItMatters: 'Direct measure of customer satisfaction, listing accuracy, and operational leakage.',
+    formula: 'Return Rate = (Total Returns & Cancellations / Total Orders) * 100',
+    businessUse: 'Identifies supply chain defects, listing description mismatches, or potential cohort anomalies.',
+    simpleExplanation: 'The percentage of your total sales that get returned or canceled.'
+  },
+  revenue_at_risk: {
+    title: 'Revenue / Value At Risk',
+    meaning: 'The monetary value of active orders that have a high statistical likelihood of being returned.',
+    whyItMatters: 'A key financial indicator representing potential cash refunds and logistical overhead.',
+    formula: 'Value at Risk = sum(Order Value * ML Risk Probability Score)',
+    businessUse: 'Allows operations teams to manage cash reserves and target listings for preventive corrections.',
+    simpleExplanation: 'The portion of active sales value that is likely to be refunded soon.'
+  },
+  returns_prevented: {
+    title: 'Returns Prevented by AI',
+    meaning: 'The estimated count of orders successfully saved from being returned due to AI-driven listing corrections.',
+    whyItMatters: 'Direct validation of optimization impact, translating directly into saved shipping costs.',
+    formula: 'Prevented Count = Baseline Return Rate - Active Return Rate * Cohort volume',
+    businessUse: 'Measures the financial return on investment of implementing listing page fixes.',
+    simpleExplanation: 'The number of returns you saved by correcting error-prone listings suggested by the platform.'
+  }
+}
+
+function KPICard({ keyName, title, rawValue, formatted, trend, trendGoodDown, sparkData, icon: Icon, color, delay }) {
   const cardRef = useRef(null)
   const [tilt, setTilt] = useState({ x: 0, y: 0 })
   const [displayValue, setDisplayValue] = useState(0)
@@ -41,6 +77,7 @@ function KPICard({ title, rawValue, formatted, trend, trendGoodDown, sparkData, 
   const trendColor = trendPositive ? 'var(--success)' : 'var(--danger)'
 
   const sparkChartData = sparkData.map((v, i) => ({ i, v }))
+  const tooltipInfo = tooltipDetails[keyName]
 
   return (
     <motion.div
@@ -82,9 +119,25 @@ function KPICard({ title, rawValue, formatted, trend, trendGoodDown, sparkData, 
       {/* Header row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
         <div>
-          <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            {title}
-          </p>
+          {tooltipInfo ? (
+            <SmartTooltip
+              title={tooltipInfo.title}
+              meaning={tooltipInfo.meaning}
+              whyItMatters={tooltipInfo.whyItMatters}
+              formula={tooltipInfo.formula}
+              businessUse={tooltipInfo.businessUse}
+              simpleExplanation={tooltipInfo.simpleExplanation}
+              placement="bottom"
+            >
+              <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', cursor: 'help' }}>
+                {title}
+              </p>
+            </SmartTooltip>
+          ) : (
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              {title}
+            </p>
+          )}
         </div>
         <div style={{
           width: 40,
@@ -173,6 +226,7 @@ export default function KPICards() {
     const Icon = iconMapping[kpiInfo.icon] || Shield
 
     return {
+      keyName: key,
       title: kpiInfo.title,
       rawValue: key === 'return_rate' ? Math.round(kpiInfo.rawValue * 10) : kpiInfo.rawValue,
       formatted: (v) => {

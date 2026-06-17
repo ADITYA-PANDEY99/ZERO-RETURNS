@@ -111,50 +111,69 @@ export default function Landing() {
             display: 'inline-flex', alignItems: 'center', gap: 8,
             background: 'color-mix(in srgb, var(--accent-primary) 15%, transparent)',
             border: '1px solid color-mix(in srgb, var(--accent-primary) 35%, transparent)',
-            borderRadius: 999, padding: '6px 16px', marginBottom: 32,
+            borderRadius: 999, padding: '6px 16px', marginBottom: 24,
             fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: 600,
           }}
         >
           <Zap size={14} />
-          Now live — AI-powered return prediction for Indian sellers
+          Now live — AI-powered operational intelligence platform
         </motion.div>
 
         {/* Main heading */}
         <motion.h1
           initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
           className="logo-text font-display"
-          style={{ fontSize: 'clamp(3rem, 8vw, 7rem)', fontWeight: 900, lineHeight: 0.95, marginBottom: 24, letterSpacing: '-0.02em' }}
+          style={{ fontSize: 'clamp(3rem, 8vw, 6rem)', fontWeight: 900, lineHeight: 0.95, marginBottom: 12, letterSpacing: '-0.02em' }}
         >
           <span className="gradient-text">Zero</span>
-          <span style={{ color: 'var(--text-primary)' }}>Return</span>
+          <span style={{ color: 'var(--text-primary)' }}>Return AI</span>
         </motion.h1>
 
         <motion.p
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-          style={{ fontSize: 'clamp(1.2rem, 3vw, 1.75rem)', color: 'var(--text-secondary)', maxWidth: 600, marginBottom: 16, lineHeight: 1.4 }}
+          style={{ fontSize: 'clamp(1.1rem, 2.5vw, 1.5rem)', color: 'var(--text-secondary)', maxWidth: 700, marginBottom: 32, lineHeight: 1.4, fontWeight: 700 }}
         >
-          Predict Returns Before They Happen
+          AI-Powered Operational Intelligence & Decisional Analytics Platform
         </motion.p>
 
-        <motion.p
+        {/* Supported Roles Showcase */}
+        <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
-          style={{ color: 'var(--text-muted)', fontSize: '1rem', marginBottom: 40, maxWidth: 480 }}
+          style={{ marginBottom: 20 }}
         >
-          AI-powered intelligence that saves lakhs in losses for Amazon, Flipkart & Meesho sellers
-        </motion.p>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>SUPPORTED CANDIDATE ROLES</span>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', maxWidth: 650 }}>
+            {['Data Analyst', 'Business Analyst', 'Product Analyst', 'Data Scientist', 'AI/ML Engineer'].map(role => (
+              <span key={role} style={{ fontSize: 11, padding: '4px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', color: '#FFF' }}>{role}</span>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Supported Industries Showcase */}
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.45 }}
+          style={{ marginBottom: 36 }}
+        >
+          <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>SUPPORTED INDUSTRIES</span>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', maxWidth: 650 }}>
+            {['Ecommerce', 'Food Delivery', 'Grocery Delivery', 'Banking & Cards', 'B2B SaaS'].map(ind => (
+              <span key={ind} style={{ fontSize: 11, padding: '4px 12px', borderRadius: 8, background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.18)', color: 'var(--accent-primary)', fontWeight: 600 }}>{ind}</span>
+            ))}
+          </div>
+        </motion.div>
 
         {/* Live counter */}
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5 }}
           style={{
-            display: 'inline-flex', alignItems: 'center', gap: 10, marginBottom: 48,
+            display: 'inline-flex', alignItems: 'center', gap: 10, marginBottom: 40,
             background: 'color-mix(in srgb, var(--success) 10%, transparent)',
             border: '1px solid color-mix(in srgb, var(--success) 25%, transparent)',
-            borderRadius: 12, padding: '12px 24px',
+            borderRadius: 12, padding: '10px 20px',
           }}
         >
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--success)', animation: 'pulseBadge 2s infinite' }} />
-          <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--success)', fontWeight: 700, fontSize: '1.1rem' }}>
+          <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--success)', fontWeight: 700, fontSize: '1rem' }}>
             ₹{savedCounter.toLocaleString('en-IN')} saved today
           </span>
         </motion.div>
@@ -162,20 +181,61 @@ export default function Landing() {
         {/* CTA buttons */}
         <motion.div
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}
-          style={{ display: 'flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center' }}
+          style={{ display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center' }}
         >
-          <button onClick={() => navigate('/dashboard')} className="btn btn-primary btn-lg" id="hero-cta-demo">
-            Try Demo Free <ArrowRight size={18} />
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="btn btn-primary btn-lg"
+            style={{
+              padding: '14px 28px',
+              borderRadius: 12,
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              boxShadow: 'var(--accent-glow)'
+            }}
+          >
+            Explore Platform
           </button>
-          <button onClick={() => navigate('/dashboard')} className="btn btn-secondary btn-lg" id="hero-cta-dashboard">
-            View Dashboard
+          
+          <button
+            onClick={() => {
+              localStorage.setItem('zeroreturns-start-tour-on-dashboard', 'true')
+              navigate('/dashboard')
+            }}
+            className="btn btn-secondary btn-lg"
+            style={{
+              padding: '14px 28px',
+              borderRadius: 12,
+              fontWeight: 700,
+              background: 'rgba(255,255,255,0.02)',
+              border: '1px solid var(--glass-border)'
+            }}
+          >
+            Take Guided Tour
+          </button>
+
+          <button
+            onClick={() => navigate('/recruiter')}
+            className="btn btn-secondary btn-lg"
+            style={{
+              padding: '14px 28px',
+              borderRadius: 12,
+              fontWeight: 700,
+              background: 'rgba(255,255,255,0.02)',
+              border: '1px solid var(--glass-border)',
+              color: 'var(--accent-secondary)'
+            }}
+          >
+            View Recruiter Mode
           </button>
         </motion.div>
 
         {/* Scroll arrow */}
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}
-          style={{ position: 'absolute', bottom: 40, left: '50%', transform: 'translateX(-50%)', animation: 'float 2s ease-in-out infinite' }}
+          style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', animation: 'float 2s ease-in-out infinite' }}
         >
           <ChevronDown size={28} style={{ color: 'var(--text-muted)' }} />
         </motion.div>
@@ -309,9 +369,24 @@ export default function Landing() {
           <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', maxWidth: 280 }}>
             AI-powered return prediction & prevention for Indian e-commerce sellers.
           </p>
-          <p style={{ marginTop: 16, color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-            Made with ❤️ for Indian e-commerce sellers
-          </p>
+          <motion.div
+            whileHover={{ scale: 1.05, y: -4, textShadow: '0 0 8px rgba(139,92,246,0.6)' }}
+            transition={{ type: 'spring', stiffness: 200 }}
+            style={{
+              marginTop: 16,
+              color: 'var(--text-muted)',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-block',
+              background: 'linear-gradient(135deg, #FFF 0%, var(--accent-primary) 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              textShadow: '0 0 10px rgba(255,255,255,0.05)'
+            }}
+          >
+            Planned, Designed & Built by Aditya Pandey
+          </motion.div>
         </div>
         <div style={{ display: 'flex', gap: 48, flexWrap: 'wrap' }}>
           <div>

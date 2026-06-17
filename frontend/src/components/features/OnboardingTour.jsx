@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import 'driver.js/dist/driver.css'
 
 /**
  * OnboardingTour — Driver.js powered guided tour
  * Triggers automatically on first visit (stored in localStorage)
- * Can also be triggered manually via triggerTour()
+ * Can also be triggered manually via landing page or settings
  */
 export default function OnboardingTour() {
   const navigate = useNavigate()
@@ -16,9 +17,11 @@ export default function OnboardingTour() {
     // Only run tour on dashboard page
     if (location.pathname !== '/dashboard') return
 
-    // Check if tour already done
+    // Check if tour already done or forced from landing page
+    const forceTour = localStorage.getItem('zeroreturns-start-tour-on-dashboard') === 'true'
     const tourDone = localStorage.getItem(TOUR_KEY)
-    if (tourDone) return
+    
+    if (tourDone && !forceTour) return
 
     // Dynamically import driver.js to keep bundle lean
     import('driver.js').then(({ driver }) => {
@@ -31,23 +34,33 @@ export default function OnboardingTour() {
         popoverClass: 'zr-driver-popover',
         onDestroyStarted: () => {
           localStorage.setItem(TOUR_KEY, 'true')
+          localStorage.removeItem('zeroreturns-start-tour-on-dashboard')
           driverObj.destroy()
         },
         steps: [
           {
             element: '#sidebar-nav',
             popover: {
-              title: '🚀 Welcome to ZeroReturn!',
-              description: 'This is your main navigation. Access Dashboard, Analytics, Uploads and Settings from here.',
+              title: '🚀 Welcome to ZeroReturn AI!',
+              description: 'This is your main navigation. From here, you can access the core dashboards, view analytical logs, upload data, and check candidate capabilities.',
               side: 'right',
               align: 'start',
             },
           },
           {
+            element: '#industry-switcher-btn',
+            popover: {
+              title: '🏢 Multi-Industry Modes',
+              description: 'Switch the entire platform layout, KPIs, and ML context instantly between Ecommerce, Food Delivery, Grocery, Banking, and SaaS.',
+              side: 'bottom',
+              align: 'end',
+            },
+          },
+          {
             element: '#kpi-cards',
             popover: {
-              title: '📊 Live KPI Cards',
-              description: 'Watch your Total Orders, Return Rate, Revenue at Risk and Returns Prevented — all updating in real time via WebSocket.',
+              title: '📊 Live KPI & Scorecards',
+              description: 'Real-time indicators tracking total volume, return/risk rates, financial loss at risk, and returns prevented by AI.',
               side: 'bottom',
               align: 'center',
             },
@@ -55,47 +68,39 @@ export default function OnboardingTour() {
           {
             element: '#anomaly-banner',
             popover: {
-              title: '🚨 Smart Anomaly Detection',
-              description: 'Our Isolation Forest ML model detects unusual return spikes in your categories and alerts you instantly.',
+              title: '🚨 Isolation Forest Anomalies',
+              description: 'Our backend ML model automatically alerts you to statistical spikes or anomalies in order cancelations or returns.',
               side: 'bottom',
             },
           },
           {
             element: '#trend-chart',
             popover: {
-              title: '📈 Return Trend Chart',
-              description: 'Track 30-day return patterns. Toggle Orders / Returns / Revenue lines and get AI-generated insights below the chart.',
+              title: '📈 Return Forecasting Hub',
+              description: 'Inspect historical order trends and look ahead with ARIMA-based return predictions and business forecasting metrics.',
               side: 'top',
             },
           },
           {
-            element: '#category-heatmap',
+            element: '#nav-recruiter',
             popover: {
-              title: '🔥 Category Risk Heatmap',
-              description: 'Instantly see which product categories carry the highest return risk. Cells turn red as risk increases.',
-              side: 'left',
-            },
-          },
-          {
-            element: '#risk-table',
-            popover: {
-              title: '📋 Orders Risk Table',
-              description: 'Every order is scored 0–100 for return probability. Filter, search and sort — then click "Fix Now" to analyze and fix high-risk listings.',
-              side: 'top',
+              title: '💼 Recruiter & Capability Matrix',
+              description: 'A custom developer portfolio dashboard showcasing architectural diagrams, tech stack details, and candidate skills matrices.',
+              side: 'right',
             },
           },
           {
             element: '#chatbot-fab',
             popover: {
-              title: '💬 AI Chatbot',
-              description: 'Ask questions in plain English or Hindi! Powered by LLaMA 3 via Groq. Also supports voice input.',
+              title: '💬 AI Analytics Copilot',
+              description: 'Ask questions in plain English or Hindi. Query return trends, trigger voice commands, or get SQL translations instantly.',
               side: 'left',
             },
           },
           {
             popover: {
-              title: '🎉 You\'re all set!',
-              description: 'Upload your order data, explore your return analytics, and start preventing returns today. Good luck! 🚀',
+              title: '🎉 Tour Complete!',
+              description: 'You are ready to explore the platform. Switch themes, try recruiter mode, or run predictions now!',
             },
           },
         ],
@@ -120,6 +125,7 @@ export default function OnboardingTour() {
 export function useTriggerTour() {
   return () => {
     localStorage.removeItem('zeroreturns-tour-done')
+    localStorage.setItem('zeroreturns-start-tour-on-dashboard', 'true')
     window.location.href = '/dashboard'
   }
 }

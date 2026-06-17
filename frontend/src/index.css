@@ -204,6 +204,86 @@
 }
 
 /* ============================================================
+   THEME 6: NEO CORPORATE — Steel Blue + Charcoal
+   ============================================================ */
+[data-theme="neo-corporate"] {
+  --bg-primary: #1e293b;
+  --bg-secondary: #0f172a;
+  --bg-tertiary: #334155;
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-bg-hover: rgba(148, 163, 184, 0.1);
+  --glass-border: rgba(148, 163, 184, 0.2);
+  --glass-border-hover: rgba(148, 163, 184, 0.6);
+  --glass-blur: blur(16px);
+  --glass-tint: rgba(148, 163, 184, 0.03);
+  --accent-primary: #3b82f6;
+  --accent-secondary: #64748b;
+  --accent-tertiary: #94a3b8;
+  --accent-glow: 0 0 30px rgba(59, 130, 246, 0.3);
+  --accent-glow-cyan: 0 0 30px rgba(100, 116, 139, 0.25);
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #64748b;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #3b82f6;
+  --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  --card-shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(59, 130, 246, 0.4);
+  --cursor-trail-color: #3b82f6;
+  --cursor-trail-color2: #64748b;
+  --sidebar-bg: rgba(15, 23, 42, 0.98);
+  --navbar-bg: rgba(15, 23, 42, 0.85);
+  --chart-1: #3b82f6;
+  --chart-2: #64748b;
+  --chart-3: #94a3b8;
+  --chart-4: #10b981;
+  --chart-5: #cbd5e1;
+  --scrollbar-track: rgba(255,255,255,0.01);
+  --scrollbar-thumb: rgba(148, 163, 184, 0.4);
+}
+
+/* ============================================================
+   THEME 7: MIDNIGHT FINANCE — Deep Navy + Gold & Emerald
+   ============================================================ */
+[data-theme="midnight-finance"] {
+  --bg-primary: #020617;
+  --bg-secondary: #0b0f19;
+  --bg-tertiary: #0f172a;
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-bg-hover: rgba(234, 179, 8, 0.08);
+  --glass-border: rgba(234, 179, 8, 0.15);
+  --glass-border-hover: rgba(16, 185, 129, 0.5);
+  --glass-blur: blur(24px);
+  --glass-tint: rgba(16, 185, 129, 0.04);
+  --accent-primary: #eab308;
+  --accent-secondary: #10b981;
+  --accent-tertiary: #facc15;
+  --accent-glow: 0 0 30px rgba(234, 179, 8, 0.4);
+  --accent-glow-cyan: 0 0 30px rgba(16, 185, 129, 0.35);
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #475569;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #eab308;
+  --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  --card-shadow-hover: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(234, 179, 8, 0.3);
+  --cursor-trail-color: #eab308;
+  --cursor-trail-color2: #10b981;
+  --sidebar-bg: rgba(2, 6, 23, 0.98);
+  --navbar-bg: rgba(2, 6, 23, 0.85);
+  --chart-1: #eab308;
+  --chart-2: #10b981;
+  --chart-3: #facc15;
+  --chart-4: #3b82f6;
+  --chart-5: #64748b;
+  --scrollbar-track: rgba(255,255,255,0.01);
+  --scrollbar-thumb: rgba(234, 179, 8, 0.4);
+}
+
+/* ============================================================
    GLOBAL BASE STYLES
    ============================================================ */
 * {
