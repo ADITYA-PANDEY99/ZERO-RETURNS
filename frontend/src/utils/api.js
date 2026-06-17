@@ -33,6 +33,13 @@ export const getComparison = (params) => api.get('/analytics/comparison', { para
 export const runWhatIf = (data) => api.post('/analytics/whatif', data)
 export const generateReport = (data) => api.post('/analytics/report/generate', data)
 
+// SQL Analytics Upgrades (Sprint 2)
+export const getSQLKPIs = () => api.get('/analytics/kpis')
+export const getSQLCohorts = () => api.get('/analytics/cohorts')
+export const getSQLRFM = () => api.get('/analytics/rfm')
+export const getSQLPareto = () => api.get('/analytics/pareto')
+
+
 // Upload
 export const uploadCSV = (formData) => api.post('/upload/csv', formData, {
   headers: { 'Content-Type': 'multipart/form-data' }
