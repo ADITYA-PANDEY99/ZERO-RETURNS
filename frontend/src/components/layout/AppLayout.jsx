@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Sidebar from './Sidebar'
 import Navbar from './Navbar'
 import {
-  LayoutDashboard, ShoppingBag, BarChart3, Upload, Settings
+  LayoutDashboard, ShoppingBag, BarChart3, Upload, Settings, UserCheck
 } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 
@@ -12,6 +12,7 @@ const BOTTOM_NAV = [
   { path: '/orders', icon: ShoppingBag, label: 'Orders' },
   { path: '/analytics', icon: BarChart3, label: 'Analytics' },
   { path: '/upload', icon: Upload, label: 'Upload' },
+  { path: '/recruiter', icon: UserCheck, label: 'Recruiter' },
   { path: '/settings', icon: Settings, label: 'Settings' },
 ]
 

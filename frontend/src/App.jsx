@@ -16,6 +16,7 @@ const OrderAnalysis = lazy(() => import('./pages/OrderAnalysis'))
 const Analytics = lazy(() => import('./pages/Analytics'))
 const Upload = lazy(() => import('./pages/Upload'))
 const Settings = lazy(() => import('./pages/Settings'))
+const Recruiter = lazy(() => import('./pages/Recruiter'))
 
 // Mesh background component
 function MeshBackground() {
@@ -102,6 +103,9 @@ function AppInner() {
           } />
           <Route path="/settings" element={
             <ProtectedRoute><Settings /></ProtectedRoute>
+          } />
+          <Route path="/recruiter" element={
+            <ProtectedRoute><Recruiter /></ProtectedRoute>
           } />
 
           {/* Fallback */}
