@@ -92,13 +92,15 @@ async def login(body: LoginRequest) -> TokenResponse:
             logger.warning(f"Supabase auth failed, falling back to mock: {e}")
 
     # Mock auth fallback
-    # Accept any email/password for demo — in production use proper validation
-    if body.email == "demo@zeroreturns.ai" and body.password == "demo1234":
-        token = _make_mock_token("user-001")
-        _TOKEN_STORE[token] = MOCK_USER
-        return TokenResponse(access_token=token, user=MOCK_USER)
+    if body.email == "demo@zeroreturns.ai":
+        if body.password == "demo1234":
+            token = _make_mock_token("user-001")
+            _TOKEN_STORE[token] = MOCK_USER
+            return TokenResponse(access_token=token, user=MOCK_USER)
+        else:
+            raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    # For development — accept any valid-looking credentials
+    # For development — accept any other valid-looking credentials
     if "@" in body.email and len(body.password) >= 4:
         user_id = str(uuid.uuid4())
         user = {

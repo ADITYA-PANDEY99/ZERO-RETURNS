@@ -2,7 +2,8 @@ import os
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
@@ -14,6 +15,7 @@ from app.models.return_predictor import ReturnPredictor
 from app.models.nlp_analyzer import NLPAnalyzer
 from app.models.image_scorer import ImageScorer
 from app.models.anomaly_detector import AnomalyDetector
+from app.utils.security import check_rate_limit, audit_environment
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -63,6 +65,9 @@ async def broadcast_demo_events():
 async def lifespan(app: FastAPI):
     """Initialize ML models and start background tasks on startup."""
     logger.info("🚀 ZeroReturn backend starting up...")
+    
+    # Audit env vars
+    audit_environment()
     
     # Initialize models
     try:
@@ -118,6 +123,27 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+# Global rate limiting middleware
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    client_ip = request.client.host if request.client else "unknown"
+    if not request.url.path.startswith("/health") and not request.url.path.startswith("/docs") and not request.url.path.startswith("/openapi.json"):
+        if not check_rate_limit(client_ip):
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Too many requests. Please try again later."}
+            )
+    return await call_next(request)
+
+# Global secure exception handler
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"UNHANDLED EXCEPTION: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "An internal operational error occurred. Please contact system support."}
+    )
 
 # CORS Middleware
 frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
