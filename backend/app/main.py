@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from app.routers import dashboard, orders, analytics, upload, chatbot, auth
+from app.routers import dashboard, orders, analytics, upload, chatbot, auth, enterprise
 from app.services.websocket_service import WebSocketManager
 from app.models.return_predictor import ReturnPredictor
 from app.models.nlp_analyzer import NLPAnalyzer
@@ -162,6 +162,7 @@ app.include_router(orders.router, prefix="/api")
 app.include_router(analytics.router, prefix="/api")
 app.include_router(upload.router, prefix="/api")
 app.include_router(chatbot.router, prefix="/api")
+app.include_router(enterprise.router, prefix="/api")
 
 
 @app.get("/health")

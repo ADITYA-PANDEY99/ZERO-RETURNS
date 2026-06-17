@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   LayoutDashboard, ShoppingBag, BarChart3, Upload,
-  Settings, LogOut, ChevronLeft, ChevronRight, Zap, TrendingDown, UserCheck
+  Settings, LogOut, ChevronLeft, ChevronRight, Zap, TrendingDown, UserCheck, Layers
 } from 'lucide-react'
 import { useState } from 'react'
 import { motion } from 'framer-motion'
@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { key: 'dashboard', path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { key: 'orders', path: '/orders', icon: ShoppingBag, label: 'Orders' },
   { key: 'analytics', path: '/analytics', icon: BarChart3, label: 'Analytics' },
+  { key: 'enterprise', path: '/enterprise', icon: Layers, label: 'Enterprise Hub' },
   { key: 'upload', path: '/upload', icon: Upload, label: 'Upload Data' },
   { key: 'recruiter', path: '/recruiter', icon: UserCheck, label: 'Recruiter Mode' },
   { key: 'settings', path: '/settings', icon: Settings, label: 'Settings' },

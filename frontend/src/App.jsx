@@ -107,6 +107,9 @@ function AppInner() {
           <Route path="/recruiter" element={
             <ProtectedRoute><Recruiter /></ProtectedRoute>
           } />
+          <Route path="/enterprise" element={
+            <ProtectedRoute><Enterprise /></ProtectedRoute>
+          } />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />

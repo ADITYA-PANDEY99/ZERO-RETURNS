@@ -68,3 +68,33 @@ def test_chatbot_endpoint():
     assert "reply" in data
     assert data["session_id"] == "test-suite-session"
     assert isinstance(data["suggestions"], list)
+
+def test_enterprise_endpoints():
+    """Verify that all metadata catalog, lineage tree, governance checks, and storytelling APIs function."""
+    # Test KPI catalog retrieval
+    res = client.get("/api/enterprise/kpis")
+    assert res.status_code == 200
+    assert "total_orders" in res.json()
+
+    # Test lineage graph data
+    res = client.get("/api/enterprise/lineage")
+    assert res.status_code == 200
+    assert len(res.json()["nodes"]) > 0
+
+    # Test governance metrics calculation
+    res = client.get("/api/enterprise/governance")
+    assert res.status_code == 200
+    assert "live_metrics" in res.json()
+    assert res.json()["live_metrics"]["governance_score"] > 50
+
+    # Test storytelling output
+    res = client.get("/api/enterprise/storytelling")
+    assert res.status_code == 200
+    assert "executive_summary" in res.json()
+
+    # Test case study export
+    payload = {"format": "markdown", "title": "ZeroReturn AI Evaluation"}
+    res = client.post("/api/enterprise/case-study/export", json=payload)
+    assert res.status_code == 200
+    assert "content" in res.json()
+    assert "ZeroReturn AI — Case Study" in res.json()["content"]
