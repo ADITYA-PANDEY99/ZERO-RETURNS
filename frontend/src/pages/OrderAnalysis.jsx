@@ -1,18 +1,55 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  PieChart, Pie, Cell, ResponsiveContainer, Tooltip
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid
 } from 'recharts'
 import {
   ArrowLeft, ChevronRight, AlertTriangle, CheckCircle, Zap,
-  ImageIcon, FileText, Star, Lightbulb, TrendingDown, BarChart2
+  ImageIcon, FileText, Star, Lightbulb, TrendingDown, BarChart2, HelpCircle
 } from 'lucide-react'
 import AppLayout from '../components/layout/AppLayout'
 import { useDashboardStore } from '../store/dashboardStore'
 import { formatCurrency, formatDate, getRiskColor, getRiskBadgeClass, getGaugeColor } from '../utils/helpers'
+import { getOrderSHAP } from '../utils/api'
 
-const TABS = ['Description', 'Image Quality', 'Review Sentiment', 'AI Suggestions']
+const TABS = ['Description', 'Image Quality', 'Review Sentiment', 'AI Suggestions', 'SHAP Explanations']
+
+// Recruiter Info Metadata Card
+function RecruiterMetadata({ question, formula, source, interpretation }) {
+  return (
+    <div style={{
+      marginBottom: 20,
+      padding: 16,
+      borderRadius: 12,
+      background: 'rgba(139,92,246,0.08)',
+      border: '1px solid rgba(139,92,246,0.2)'
+    }}>
+      <h4 style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 700, color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <HelpCircle size={14} /> METADATA (Interview / Recruiter Mode)
+      </h4>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 12 }}>
+        <div>
+          <span style={{ color: 'var(--text-muted)' }}>Business Question:</span>
+          <p style={{ margin: '2px 0 0', color: 'var(--text-secondary)' }}>{question}</p>
+        </div>
+        <div>
+          <span style={{ color: 'var(--text-muted)' }}>Formula / Rule:</span>
+          <p style={{ margin: '2px 0 0', color: 'var(--text-secondary)' }}><code>{formula}</code></p>
+        </div>
+        <div>
+          <span style={{ color: 'var(--text-muted)' }}>Data Source:</span>
+          <p style={{ margin: '2px 0 0', color: 'var(--text-secondary)' }}>{source}</p>
+        </div>
+        <div>
+          <span style={{ color: 'var(--text-muted)' }}>Interpretation Guide:</span>
+          <p style={{ margin: '2px 0 0', color: 'var(--text-secondary)' }}>{interpretation}</p>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // Semi-circle gauge using recharts PieChart
 function ReturnGauge({ value }) {
@@ -142,7 +179,7 @@ function ImageQualityTab({ order }) {
 
   return (
     <div>
-      <div style={{ display: 'flex', align: 'center', gap: 16, marginBottom: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
         <div style={{
           width: 140, height: 140,
           borderRadius: 12,
@@ -395,6 +432,226 @@ function AISuggestionsTab({ order }) {
   )
 }
 
+// SHAP Tab component
+function SHAPTab({ order }) {
+  const [shapData, setShapData] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let active = true
+    async function fetchSHAP() {
+      try {
+        setLoading(true)
+        const res = await getOrderSHAP(order.order_id)
+        if (active) {
+          setShapData(res.data)
+        }
+      } catch (err) {
+        console.error("Error fetching SHAP explanations", err)
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    fetchSHAP()
+    return () => { active = false }
+  }, [order.order_id])
+
+  if (loading) {
+    return (
+      <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-muted)' }}>
+        <p>Calculating Shapley values & feature contributions...</p>
+      </div>
+    )
+  }
+
+  if (!shapData) {
+    return (
+      <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-muted)' }}>
+        <p>Failed to calculate SHAP values for this order.</p>
+      </div>
+    )
+  }
+
+  const waterfallChartData = shapData.waterfall_data.map((item) => {
+    const isPositive = item.value >= 0
+    return {
+      name: item.feature,
+      displayVal: (item.value * 100).toFixed(1) + '%',
+      range: [item.start * 100, item.end * 100],
+      value: item.value * 100,
+      isPositive
+    }
+  })
+
+  const globalImportance = [
+    { feature: 'Listing Copy Quality score', importance: 22 },
+    { feature: 'Image brightness/contrast/blur quality', importance: 18 },
+    { feature: 'Average Customer Review Score', importance: 15 },
+    { feature: 'Seller Rating score', importance: 12 },
+    { feature: 'Description length chars', importance: 10 },
+    { feature: 'Delivery transit time', importance: 8 },
+    { feature: 'Reviews count (Log)', importance: 5 },
+    { feature: 'Product Price (Log)', importance: 5 },
+    { feature: 'Category historical risk factor', importance: 5 }
+  ]
+
+  return (
+    <div>
+      <RecruiterMetadata
+        question="Why did the ML model assign this return risk probability to the order?"
+        formula="Shapley Value Equation: \phi_i(v) = \sum_{S \subseteq N \setminus \{i\}} \frac{|S|!(|N|-|S|-1)!}{|N|!} (v(S \cup \{i\}) - v(S))"
+        source="SHAP (SHapley Additive exPlanations) model wrapper around ensemble classifier"
+        interpretation="Green bars decrease risk probability from baseline (18.3%). Red/orange bars increase risk. Sum of contributions equals predicted score minus base value."
+      />
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 24, marginBottom: 24 }} className="shap-grid">
+        <style>{`
+          @media (max-width: 900px) { .shap-grid { grid-template-columns: 1fr !important; } }
+        `}</style>
+        
+        {/* Waterfall Chart */}
+        <div className="glass-card" style={{ padding: 20 }}>
+          <h4 style={{ margin: '0 0 16px', fontSize: 14, fontWeight: 700, color: '#FFF' }}>
+            Local Explanation: SHAP Waterfall Chart
+          </h4>
+          <div style={{ height: 320 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={waterfallChartData}
+                layout="vertical"
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <XAxis type="number" domain={[0, 100]} unit="%" />
+                <YAxis dataKey="name" type="category" width={150} tick={{ fontSize: 10, fill: '#94A3B8' }} />
+                <Tooltip
+                  contentStyle={{
+                    background: 'rgba(10,8,32,0.95)',
+                    border: '1px solid rgba(139,92,246,0.3)',
+                    borderRadius: 8,
+                    fontSize: 12,
+                  }}
+                  formatter={(value, name, props) => {
+                    return [`${props.payload.displayVal}`, 'SHAP Value Contribution']
+                  }}
+                />
+                <Bar dataKey="range" fill="#8884d8">
+                  {waterfallChartData.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={entry.isPositive ? 'rgba(239, 68, 68, 0.75)' : 'rgba(16, 185, 129, 0.75)'}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 10, display: 'flex', gap: 12, justifyContent: 'center' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ width: 10, height: 10, background: 'rgba(239, 68, 68, 0.75)', borderRadius: 2 }} /> Increases Risk
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ width: 10, height: 10, background: 'rgba(16, 185, 129, 0.75)', borderRadius: 2 }} /> Decreases Risk
+            </span>
+            <span>Base Value: {(shapData.base_value * 100).toFixed(1)}%</span>
+            <span>Predicted Value: {shapData.predicted_risk_score.toFixed(1)}%</span>
+          </div>
+        </div>
+
+        {/* Global Feature Importance */}
+        <div className="glass-card" style={{ padding: 20 }}>
+          <h4 style={{ margin: '0 0 16px', fontSize: 14, fontWeight: 700, color: '#FFF' }}>
+            Global Feature Importance (Model-wide)
+          </h4>
+          <div style={{ height: 320 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={globalImportance}
+                layout="vertical"
+                margin={{ top: 5, right: 10, left: 10, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <XAxis type="number" domain={[0, 25]} unit="%" />
+                <YAxis dataKey="feature" type="category" width={150} tick={{ fontSize: 10, fill: '#94A3B8' }} />
+                <Tooltip
+                  contentStyle={{
+                    background: 'rgba(10,8,32,0.95)',
+                    border: '1px solid rgba(139,92,246,0.3)',
+                    borderRadius: 8,
+                    fontSize: 12,
+                  }}
+                  formatter={(val) => [`${val}%`, 'Importance Weight']}
+                />
+                <Bar dataKey="importance" fill="var(--accent-primary)">
+                  {globalImportance.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={`rgba(139, 92, 246, ${1 - index * 0.08})`} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Feature Contribution Table */}
+      <div className="glass-card" style={{ padding: 20, marginBottom: 24 }}>
+        <h4 style={{ margin: '0 0 16px', fontSize: 14, fontWeight: 700, color: '#FFF' }}>
+          Detailed Feature Contribution Table
+        </h4>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                <th style={{ textAlign: 'left', padding: '10px 8px', color: 'var(--text-muted)' }}>Feature Column</th>
+                <th style={{ textAlign: 'right', padding: '10px 8px', color: 'var(--text-muted)' }}>Contribution Value</th>
+                <th style={{ textAlign: 'left', padding: '10px 8px', color: 'var(--text-muted)', paddingLeft: 20 }}>Directional Influence</th>
+              </tr>
+            </thead>
+            <tbody>
+              {shapData.contributions.map((c, i) => {
+                const isPositive = c.impact >= 0
+                return (
+                  <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <td style={{ padding: '10px 8px', fontWeight: 600, color: 'var(--text-secondary)' }}>{c.feature}</td>
+                    <td style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 700, color: isPositive ? '#EF4444' : '#10B981' }}>
+                      {c.impact > 0 ? '+' : ''}{(c.impact * 100).toFixed(2)}%
+                    </td>
+                    <td style={{ padding: '10px 8px', paddingLeft: 20, color: 'var(--text-muted)' }}>{c.description}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Beeswarm summary */}
+      <div className="glass-card" style={{ padding: 20 }}>
+        <h4 style={{ margin: '0 0 16px', fontSize: 14, fontWeight: 700, color: '#FFF' }}>
+          Stylized SHAP Beeswarm Distribution summary
+        </h4>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {globalImportance.slice(0, 4).map((item, idx) => (
+            <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderRadius: 8, background: 'rgba(255, 255, 255, 0.02)' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{item.feature}</span>
+              <div style={{ display: 'flex', gap: 4 }}>
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#EF4444', opacity: 0.2 }} />
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#EF4444', opacity: 0.5 }} />
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#EF4444', opacity: 0.8 }} />
+                <div style={{ width: 12, height: 12, borderRadius: '50%', background: 'var(--accent-primary)', border: '2px solid #FFF' }} />
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#10B981', opacity: 0.8 }} />
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#10B981', opacity: 0.5 }} />
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#10B981', opacity: 0.2 }} />
+              </div>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>High impact variance</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Risk Factors
 const mockRiskFactors = [
   { icon: FileText, label: 'Description mismatch with reviews', severity: 'high' },
@@ -430,6 +687,7 @@ export default function OrderAnalysis() {
     <ImageQualityTab order={order} />,
     <ReviewSentimentTab order={order} />,
     <AISuggestionsTab order={order} />,
+    <SHAPTab order={order} />,
   ]
 
   return (
@@ -511,7 +769,7 @@ export default function OrderAnalysis() {
               textAlign: 'center',
             }}>
               <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>
-                <strong style={{ color: getRiskColor(order.risk_level) }}>High risk</strong> — recommend immediate action to reduce return probability
+                <strong style={{ color: getRiskColor(order.risk_level) }}>{order.risk_level} Risk</strong> — recommend immediate action to reduce return probability
               </p>
             </div>
           </motion.div>

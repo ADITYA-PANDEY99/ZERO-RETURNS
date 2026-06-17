@@ -272,3 +272,38 @@ class PipelineValidationReport(BaseModel):
     null_values_filled: Dict[str, int]
     issues: List[str]
 
+
+# ---------------------------------------------------------------------------
+# SHAP & Forecasting Schemas (Sprint 3 Upgrades)
+# ---------------------------------------------------------------------------
+
+class SHAPFeatureImpact(BaseModel):
+    feature: str
+    impact: float
+    description: str
+
+
+class SHAPExplanationResponse(BaseModel):
+    order_id: str
+    predicted_risk_score: float
+    base_value: float
+    contributions: List[SHAPFeatureImpact]
+    waterfall_data: List[Dict[str, Any]]
+
+
+class ForecastDataPoint(BaseModel):
+    date: str
+    actual: Optional[float] = None
+    forecast: float
+    confidence_lower: float
+    confidence_upper: float
+
+
+class MetricForecastResponse(BaseModel):
+    metric: str
+    forecast_data: List[ForecastDataPoint]
+    mape: float
+    rmse: float
+    stability_score: float
+
+

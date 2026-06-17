@@ -16,6 +16,8 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
+from app.schemas.models import SHAPExplanationResponse
+
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
 
@@ -572,6 +574,20 @@ async def apply_fix(order_id: str, fix_data: Optional[Dict[str, Any]] = None) ->
         "estimated_return_reduction": round((prev_risk - order["risk_score"]) * 0.6, 1),
         "message": "Fix applied successfully. Description quality improved.",
     }
+
+
+@router.get("/{order_id}/explain", response_model=SHAPExplanationResponse)
+async def get_order_explanation(order_id: str) -> SHAPExplanationResponse:
+    """Explain return probability risk contributions using SHAP explainer values."""
+    if order_id not in _ORDER_MAP:
+        raise HTTPException(status_code=404, detail=f"Order {order_id} not found")
+        
+    order = _ORDER_MAP[order_id]
+    from app.utils.forecasting_engine import SHAPExplainer
+    
+    res = SHAPExplainer.explain_order(order_id, order)
+    return SHAPExplanationResponse(**res)
+
 
 
 # ---------------------------------------------------------------------------

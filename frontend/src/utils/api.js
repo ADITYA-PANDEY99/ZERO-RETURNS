@@ -39,6 +39,11 @@ export const getSQLCohorts = () => api.get('/analytics/cohorts')
 export const getSQLRFM = () => api.get('/analytics/rfm')
 export const getSQLPareto = () => api.get('/analytics/pareto')
 
+// Sprint 3 Upgrades (SHAP & Forecast)
+export const getForecast = (params) => api.get('/analytics/forecast', { params })
+export const getOrderSHAP = (id) => api.get(`/orders/${id}/explain`)
+
+
 
 // Upload
 export const uploadCSV = (formData) => api.post('/upload/csv', formData, {
