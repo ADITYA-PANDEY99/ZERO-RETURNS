@@ -4,6 +4,8 @@ import { motion } from 'framer-motion'
 import { Lock, Mail, ChevronRight, BarChart2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+
 export default function Login() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
@@ -11,7 +13,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault()
     setError('')
 
@@ -21,12 +23,33 @@ export default function Login() {
     }
 
     setLoading(true)
-    setTimeout(() => {
-      localStorage.setItem('zeroreturns-token', 'demo-token-2024')
-      setLoading(false)
-      toast.success('Successfully logged in!')
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        // API returned a 4xx/5xx — show the error detail from the response
+        setError(data.detail || 'Login failed. Please check your credentials.')
+        setLoading(false)
+        return
+      }
+
+      // Store the REAL token returned by the API (not a hardcoded string)
+      localStorage.setItem('zeroreturns-token', data.access_token)
+      localStorage.setItem('zeroreturns-user', JSON.stringify(data.user || {}))
+      toast.success(`Welcome back, ${data.user?.full_name || 'User'}!`)
       navigate('/dashboard')
-    }, 1500)
+    } catch (err) {
+      // Network error (backend not running, etc.)
+      setError('Cannot connect to server. Is the backend running on port 8000?')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -175,8 +198,23 @@ export default function Login() {
         {/* OAuth Buttons */}
         <button
           onClick={() => {
-            toast.success('Google authentication simulation started!')
-            setTimeout(() => navigate('/dashboard'), 1000)
+            // NOTE: Google OAuth requires Supabase configured in backend/.env
+            // This simulates login with the demo account for local development
+            toast.loading('Simulating demo login...', { duration: 1000 })
+            fetch(`${API_BASE}/api/auth/login`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: 'demo@zeroreturns.ai', password: 'demo1234' }),
+            })
+              .then(r => r.json())
+              .then(data => {
+                localStorage.setItem('zeroreturns-token', data.access_token)
+                localStorage.setItem('zeroreturns-user', JSON.stringify(data.user || {}))
+                navigate('/dashboard')
+              })
+              .catch(() => {
+                toast.error('Backend not reachable')
+              })
           }}
           className="btn btn-secondary"
           style={{
@@ -194,8 +232,13 @@ export default function Login() {
             <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fillRule="evenodd" />
             <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
           </svg>
-          <span>Continue with Google</span>
+          <span>Demo Login (no Supabase needed)</span>
         </button>
+
+        {/* Demo credentials hint */}
+        <p style={{ textAlign: 'center', marginTop: '8px', marginBottom: 0, color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+          Demo: <code style={{ color: 'var(--accent-primary)' }}>demo@zeroreturns.ai</code> / <code style={{ color: 'var(--accent-primary)' }}>demo1234</code>
+        </p>
 
         {/* Footer */}
         <p style={{ textAlign: 'center', marginTop: '32px', marginBottom: 0, color: 'var(--text-muted)', fontSize: '0.875rem' }}>

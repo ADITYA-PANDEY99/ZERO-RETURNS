@@ -5,17 +5,22 @@ and PDF report generation endpoint.
 from __future__ import annotations
 
 import random
+import sqlite3
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 
-from app.schemas.models import WhatIfRequest, WhatIfResponse, ReportRequest
+from app.schemas.models import (
+    WhatIfRequest, WhatIfResponse, ReportRequest,
+    KPISummaryResponse, CohortItem, RFMItem, ParetoResponse
+)
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
 _RNG = random.Random(2024)
+
 
 
 # ---------------------------------------------------------------------------
@@ -148,6 +153,110 @@ async def generate_report(request: ReportRequest) -> Dict[str, Any]:
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Report generation failed: {str(e)}")
+
+
+# ---------------------------------------------------------------------------
+# Reusable SQL Analytics & KPI Endpoints (Sprint Upgrade)
+# ---------------------------------------------------------------------------
+
+def _get_populated_analytics_db() -> sqlite3.Connection:
+    """Helper to spin up an in-memory database representing current orders."""
+    conn = sqlite3.connect(":memory:")
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS orders (
+            id TEXT PRIMARY KEY,
+            product_name TEXT,
+            category TEXT,
+            price REAL,
+            customer_name TEXT,
+            seller_name TEXT,
+            returned INTEGER,
+            review_score REAL,
+            seller_rating REAL
+        )
+    """)
+    
+    # Import mock orders
+    from app.routers.orders import _MOCK_ORDERS
+    for o in _MOCK_ORDERS:
+        cursor.execute("""
+            INSERT OR IGNORE INTO orders (id, product_name, category, price, customer_name, seller_name, returned, review_score, seller_rating)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            o["order_id"], o["product_name"], o["category"], o["price"],
+            o["customer_name"], o["seller_name"],
+            1 if o["risk_level"] in ("High", "Critical") else 0,
+            o.get("avg_review_score", 4.0), o.get("seller_rating", 4.0)
+        ))
+    conn.commit()
+    return conn
+
+
+@router.get("/kpis", response_model=KPISummaryResponse)
+async def get_kpis_summary() -> KPISummaryResponse:
+    """Fetch high-level enterprise metrics computed via the reusable KPIEngine."""
+    db_conn = _get_populated_analytics_db()
+    try:
+        from app.utils.analytics_layer import AnalyticsFeatureStore, KPIEngine
+        
+        # Sync feature tables
+        fs = AnalyticsFeatureStore(db_conn)
+        # Fetch current orders as DataFrame
+        orders_df = pd.read_sql_query("SELECT * FROM orders", db_conn)
+        fs.sync_feature_store(orders_df)
+        
+        # Compute KPIs
+        engine = KPIEngine(db_conn)
+        kpi_data = engine.compute_all_kpis()
+        return KPISummaryResponse(**kpi_data)
+    finally:
+        db_conn.close()
+
+
+@router.get("/cohorts", response_model=List[CohortItem])
+async def get_cohort_analysis() -> List[CohortItem]:
+    """Execute Category/Price distribution Cohort returns analysis."""
+    db_conn = _get_populated_analytics_db()
+    try:
+        from app.utils.analytics_layer import SQLAnalyticsLayer
+        layer = SQLAnalyticsLayer(db_conn)
+        return layer.cohort_analysis()
+    finally:
+        db_conn.close()
+
+
+@router.get("/rfm", response_model=List[RFMItem])
+async def get_rfm_analysis() -> List[RFMItem]:
+    """Segment customers using Recency, Frequency, and Monetary parameters."""
+    db_conn = _get_populated_analytics_db()
+    try:
+        from app.utils.analytics_layer import AnalyticsFeatureStore, SQLAnalyticsLayer
+        fs = AnalyticsFeatureStore(db_conn)
+        orders_df = pd.read_sql_query("SELECT * FROM orders", db_conn)
+        fs.sync_feature_store(orders_df)
+        
+        layer = SQLAnalyticsLayer(db_conn)
+        return layer.rfm_analysis()
+    finally:
+        db_conn.close()
+
+
+@router.get("/pareto", response_model=ParetoResponse)
+async def get_pareto_analysis() -> ParetoResponse:
+    """Detect return drivers based on the Pareto 80/20 principle."""
+    db_conn = _get_populated_analytics_db()
+    try:
+        from app.utils.analytics_layer import AnalyticsFeatureStore, SQLAnalyticsLayer
+        fs = AnalyticsFeatureStore(db_conn)
+        orders_df = pd.read_sql_query("SELECT * FROM orders", db_conn)
+        fs.sync_feature_store(orders_df)
+        
+        layer = SQLAnalyticsLayer(db_conn)
+        return ParetoResponse(**layer.pareto_analysis())
+    finally:
+        db_conn.close()
+
 
 
 # ---------------------------------------------------------------------------

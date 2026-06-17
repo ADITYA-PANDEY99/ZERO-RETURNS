@@ -6,6 +6,7 @@ import {
   ResponsiveContainer, Legend
 } from 'recharts'
 import { Download, Zap, Calendar, TrendingUp } from 'lucide-react'
+import toast from 'react-hot-toast'
 import AppLayout from '../components/layout/AppLayout'
 import WhatIfSimulator from '../components/features/WhatIfSimulator'
 import { useDashboardStore } from '../store/dashboardStore'
@@ -217,6 +218,8 @@ function ComparisonTab() {
 }
 
 // ─── Reports Tab ───
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+
 function ReportsTab() {
   const { kpis, orders } = useDashboardStore()
   const [generating, setGenerating] = useState(false)
@@ -226,47 +229,67 @@ function ReportsTab() {
     setGenerating(true)
     setProgress(0)
 
-    // Simulate progress
-    for (let i = 0; i <= 100; i += 10) {
-      await new Promise(r => setTimeout(r, 250))
-      setProgress(i)
+    // Animate progress while waiting for backend
+    const progressInterval = setInterval(() => {
+      setProgress(p => {
+        if (p >= 85) {
+          clearInterval(progressInterval)
+          return 85
+        }
+        return p + 7
+      })
+    }, 400)
+
+    try {
+      const res = await fetch(`${API_BASE}/api/analytics/report/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('zeroreturns-token') || ''}`,
+        },
+        body: JSON.stringify({
+          report_type: 'full',
+          date_range_days: 30,
+          include_charts: true,
+        }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.detail || `Server error ${res.status}`)
+      }
+
+      const data = await res.json()
+      clearInterval(progressInterval)
+      setProgress(100)
+
+      // Convert base64 PDF to downloadable blob
+      if (data.pdf_base64) {
+        const byteChars = atob(data.pdf_base64)
+        const byteArr = new Uint8Array(byteChars.length)
+        for (let i = 0; i < byteChars.length; i++) {
+          byteArr[i] = byteChars.charCodeAt(i)
+        }
+        const blob = new Blob([byteArr], { type: 'application/pdf' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = data.filename || `ZeroReturn_Report_${new Date().toISOString().split('T')[0]}.pdf`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        toast.success('📄 PDF report downloaded successfully!')
+      } else {
+        toast.error('Report generated but no PDF data received.')
+      }
+    } catch (err) {
+      clearInterval(progressInterval)
+      toast.error(`Report generation failed: ${err.message}`)
+    } finally {
+      setGenerating(false)
+      setProgress(0)
     }
-
-    // Build simple text report since jsPDF may not be installed
-    const reportLines = [
-      'ZeroReturn Analytics Report',
-      `Generated: ${new Date().toLocaleDateString('en-IN')}`,
-      '',
-      '--- KPI SUMMARY ---',
-      `Total Orders: ${kpis.total_orders.toLocaleString('en-IN')}`,
-      `Return Rate: ${kpis.return_rate}%`,
-      `Revenue at Risk: ${formatCurrency(kpis.revenue_at_risk)}`,
-      `Returns Prevented: ${kpis.returns_prevented.toLocaleString('en-IN')}`,
-      '',
-      '--- TOP 10 HIGH RISK ORDERS ---',
-      ...orders
-        .filter(o => o.risk_level === 'Critical' || o.risk_level === 'High')
-        .slice(0, 10)
-        .map(o => `${o.order_id} | ${o.product_name} | Risk: ${o.risk_score} | ${o.risk_level}`),
-      '',
-      '--- RECOMMENDATIONS ---',
-      '1. Add size charts to Clothing & Footwear (est. -28% returns)',
-      '2. Rewrite Electronics product descriptions (-18% returns)',
-      '3. Replace low-quality product images (-15% returns)',
-      '4. Set up automated anomaly alerts for return spikes',
-      '5. Implement customer Q&A section for top products',
-    ]
-
-    const blob = new Blob([reportLines.join('\n')], { type: 'text/plain' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `ZeroReturn_Report_${new Date().toISOString().split('T')[0]}.txt`
-    a.click()
-    URL.revokeObjectURL(url)
-
-    setGenerating(false)
-    setProgress(0)
   }
 
   return (

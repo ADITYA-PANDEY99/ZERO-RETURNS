@@ -4,6 +4,8 @@ import { motion } from 'framer-motion'
 import { Lock, Mail, User, ShieldAlert, BarChart2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+
 export default function Signup() {
   const navigate = useNavigate()
   const [name, setName] = useState('')
@@ -13,7 +15,7 @@ export default function Signup() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const handleSignup = (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault()
     setError('')
 
@@ -27,13 +29,37 @@ export default function Signup() {
       return
     }
 
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.')
+      return
+    }
+
     setLoading(true)
-    setTimeout(() => {
-      localStorage.setItem('zeroreturns-token', 'demo-token-2024')
-      setLoading(false)
-      toast.success('Account created successfully!')
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, full_name: name }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setError(data.detail || 'Signup failed. Please try again.')
+        setLoading(false)
+        return
+      }
+
+      // Store the REAL token returned by the API
+      localStorage.setItem('zeroreturns-token', data.access_token)
+      localStorage.setItem('zeroreturns-user', JSON.stringify(data.user || {}))
+      toast.success(`Account created! Welcome, ${data.user?.full_name || name}!`)
       navigate('/dashboard')
-    }, 1500)
+    } catch (err) {
+      setError('Cannot connect to server. Is the backend running on port 8000?')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

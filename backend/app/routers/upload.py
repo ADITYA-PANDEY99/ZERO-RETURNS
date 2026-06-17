@@ -99,9 +99,15 @@ async def _process_upload(job_id: str, content: bytes, ext: str) -> None:
         job["status"] = "processing"
         job["progress_pct"] = 10.0
 
-        # Stage 2: parse file
+        # Stage 2: parse, validate and clean file
         await asyncio.sleep(1.0)
-        df = _parse_file(content, ext)
+        df_raw = _parse_file(content, ext)
+        
+        from app.utils.analytics_layer import AnalyticsPipeline
+        pipeline_res = AnalyticsPipeline.validate_and_clean(df_raw)
+        df = pipeline_res["cleaned_df"]
+        val_report = pipeline_res["report"]
+
         job["rows_total"] = len(df)
         job["progress_pct"] = 30.0
 
@@ -116,6 +122,7 @@ async def _process_upload(job_id: str, content: bytes, ext: str) -> None:
 
         # Stage 5: build result summary
         result_summary = _build_result_summary(df)
+        result_summary["validation_report"] = val_report
         await asyncio.sleep(0.5)
 
         job["status"] = "completed"
@@ -127,6 +134,7 @@ async def _process_upload(job_id: str, content: bytes, ext: str) -> None:
         logger.error(f"Upload job {job_id} failed: {e}")
         job["status"] = "failed"
         job["error"] = str(e)
+
 
 
 def _parse_file(content: bytes, ext: str):

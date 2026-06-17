@@ -1,9 +1,6 @@
-@import "tailwindcss";
-
-/* ============================================================
-   GOOGLE FONTS
-   ============================================================ */
+/* Google Fonts — must be first @import per CSS spec */
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
 
 /* ============================================================
    THEME 1: GLASS (Default) — Glassmorphism + Neon Purple/Cyan

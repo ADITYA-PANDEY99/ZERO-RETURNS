@@ -216,3 +216,59 @@ class ReportRequest(BaseModel):
     categories: Optional[List[str]] = None
     date_range_days: int = 30
     include_charts: bool = True
+
+
+# ---------------------------------------------------------------------------
+# Operational Analytics & KPI Schemas
+# ---------------------------------------------------------------------------
+
+class KPISummaryResponse(BaseModel):
+    total_orders: int
+    total_revenue: float
+    total_returns: int
+    return_rate: float
+    refund_rate: float
+    revenue_at_risk: float
+    revenue_saved: float
+    product_health: float
+    seller_health: float
+    customer_health: float
+    operational_risk: float
+
+
+class CohortItem(BaseModel):
+    category: str
+    price_tier: str
+    order_count: int
+    return_count: int
+    return_rate: float
+
+
+class RFMItem(BaseModel):
+    customer_name: str
+    monetary_value: float
+    frequency: int
+    customer_risk_score: float
+    segment_name: str
+
+
+class ParetoDriver(BaseModel):
+    product_name: str
+    total_returns: int
+    cum_returns: int
+    cum_percentage: float
+
+
+class ParetoResponse(BaseModel):
+    pareto_ratio: float
+    total_returns: int
+    top_drivers: List[ParetoDriver]
+
+
+class PipelineValidationReport(BaseModel):
+    timestamp: str
+    total_records_received: int
+    duplicate_records_removed: int
+    null_values_filled: Dict[str, int]
+    issues: List[str]
+
