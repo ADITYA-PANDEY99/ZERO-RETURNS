@@ -17,6 +17,7 @@ const Analytics = lazy(() => import('./pages/Analytics'))
 const Upload = lazy(() => import('./pages/Upload'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Recruiter = lazy(() => import('./pages/Recruiter'))
+const Enterprise = lazy(() => import('./pages/Enterprise'))
 
 // Mesh background component
 function MeshBackground() {
