@@ -98,3 +98,27 @@ def test_enterprise_endpoints():
     assert res.status_code == 200
     assert "content" in res.json()
     assert "ZeroReturn AI — Case Study" in res.json()["content"]
+
+def test_recruiter_readiness_api():
+    """Verify that the recruiter readiness engine dynamically computes maturity scores, roles, and yields evidence."""
+    res = client.get("/api/enterprise/recruiter/readiness")
+    assert res.status_code == 200
+    data = res.json()
+    assert "maturities" in data
+    assert "roles" in data
+    assert "evidence" in data
+    assert data["roles"]["data_analyst"]["score"] > 50
+    assert data["roles"]["data_analyst"]["interval"] > 0
+    assert "analytics" in data["evidence"]
+
+def test_readiness_check():
+    """Verify that the readiness check route returns a structured dependency validation report."""
+    response = client.get("/readiness")
+    # In test mode some environment credentials might be missing yielding 503, but the schema must be fully populated
+    assert response.status_code in (200, 503)
+    data = response.json()
+    assert "status" in data
+    assert "checks" in data
+    assert "environment_variables" in data["checks"]
+    assert "database_warehouse" in data["checks"]
+    assert "ai_provider" in data["checks"]

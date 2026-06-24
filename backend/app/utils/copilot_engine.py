@@ -71,19 +71,93 @@ class RAGKnowledgePlatform:
     ]
 
     def __init__(self):
-        self.vectorizer = TfidfVectorizer(stop_words="english")
+        # We enforce max_features=384 to fit our vector(384) pgvector schema definition
+        self.vectorizer = TfidfVectorizer(max_features=384, stop_words="english")
         self.corpus = [doc["content"] for doc in self.DOCUMENTS]
         self.tfidf_matrix = self.vectorizer.fit_transform(self.corpus)
+        
+        # Cache list of features to reconstruct vector queries
+        self._seed_postgres_if_needed()
+
+    def _seed_postgres_if_needed(self):
+        """Seed documents with pgvector embeddings to Supabase PostgreSQL database if empty."""
+        db_url = os.environ.get("DATABASE_URL")
+        if not db_url:
+            return
+        
+        try:
+            import psycopg2
+            from psycopg2.extras import Json
+            
+            conn = psycopg2.connect(db_url)
+            cursor = conn.cursor()
+            
+            # Check if database table exists and has entries
+            cursor.execute("SELECT COUNT(*) FROM product_embeddings")
+            count = cursor.fetchone()[0]
+            if count == 0:
+                for idx, doc in enumerate(self.DOCUMENTS):
+                    vec = self.tfidf_matrix[idx].toarray()[0].tolist()
+                    vec_str = "[" + ",".join(map(str, vec)) + "]"
+                    cursor.execute("""
+                        INSERT INTO product_embeddings (product_id, category, embedding, metadata)
+                        VALUES (%s, %s, %s, %s)
+                    """, (doc["id"], doc["category"], vec_str, Json(doc)))
+                conn.commit()
+            cursor.close()
+            conn.close()
+        except Exception as e:
+            import logging
+            logging.getLogger("zeroreturn.rag").warning(f"Failed to seed RAG vectors to Supabase PostgreSQL: {e}")
 
     def search(self, query: str, top_k: int = 2) -> List[Dict[str, Any]]:
-        """Finds most semantically similar knowledge articles to the query."""
+        """Finds most semantically similar knowledge articles, using pgvector if available, else TF-IDF fallback."""
+        db_url = os.environ.get("DATABASE_URL")
+        if db_url:
+            try:
+                import psycopg2
+                
+                # Project query into the same 384-dimensional space
+                query_vec = self.vectorizer.transform([query]).toarray()[0].tolist()
+                query_vec_str = "[" + ",".join(map(str, query_vec)) + "]"
+                
+                conn = psycopg2.connect(db_url)
+                cursor = conn.cursor()
+                
+                # Perform cosine similarity query (1 - cosine similarity is <=> operator in pgvector)
+                cursor.execute("""
+                    SELECT product_id, category, metadata, (1 - (embedding <=> %s)) as similarity
+                    FROM product_embeddings
+                    ORDER BY embedding <=> %s
+                    LIMIT %s
+                """, (query_vec_str, query_vec_str, top_k))
+                
+                rows = cursor.fetchall()
+                results = []
+                for row in rows:
+                    product_id, category, metadata, similarity = row
+                    if similarity > 0.05: # Similarity threshold
+                        results.append({
+                            **metadata,
+                            "score": round(float(similarity), 3)
+                        })
+                
+                cursor.close()
+                conn.close()
+                if results:
+                    return results
+            except Exception as e:
+                import logging
+                logging.getLogger("zeroreturn.rag").warning(f"pgvector query failed, running TF-IDF fallback: {e}")
+
+        # Local TF-IDF Fallback
         query_vector = self.vectorizer.transform([query])
         similarities = cosine_similarity(query_vector, self.tfidf_matrix).flatten()
         top_indices = np.argsort(similarities)[::-1][:top_k]
         
         results = []
         for idx in top_indices:
-            if similarities[idx] > 0.05: # Threshold
+            if similarities[idx] > 0.05:
                 doc = self.DOCUMENTS[idx]
                 results.append({
                     **doc,

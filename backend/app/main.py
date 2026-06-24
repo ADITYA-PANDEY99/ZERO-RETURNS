@@ -167,9 +167,12 @@ app.include_router(enterprise.router, prefix="/api")
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint."""
+    """Health check endpoint evaluating service status."""
+    from app.utils.deployment_services import DeploymentValidationServices
+    db_ok, db_msg = DeploymentValidationServices.check_database_connectivity()
+    
     return {
-        "status": "healthy",
+        "status": "healthy" if db_ok else "degraded",
         "service": "ZeroReturn API",
         "version": "1.0.0",
         "environment": os.getenv("ENVIRONMENT", "development"),
@@ -179,9 +182,45 @@ async def health_check():
             "image_scorer": image_scorer.is_ready,
             "anomaly_detector": anomaly_detector.is_ready,
         },
+        "database_status": db_msg,
         "groq_available": bool(os.getenv("GROQ_API_KEY")),
         "supabase_available": bool(os.getenv("SUPABASE_URL")),
     }
+
+
+@app.get("/readiness")
+async def readiness_check():
+    """Readiness check endpoint for cloud load balancers."""
+    from app.utils.deployment_services import DeploymentValidationServices
+    from fastapi import Response, status
+    
+    env_ok, missing_vars = DeploymentValidationServices.validate_environment_variables()
+    db_ok, db_msg = DeploymentValidationServices.check_database_connectivity()
+    ai_ok, ai_msg = DeploymentValidationServices.check_ai_provider_connectivity()
+    
+    ready = env_ok and db_ok and ai_ok
+    status_code = status.HTTP_200_OK if ready else status.HTTP_503_SERVICE_UNAVAILABLE
+    
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "status": "ready" if ready else "not_ready",
+            "checks": {
+                "environment_variables": {
+                    "status": "ok" if env_ok else "missing",
+                    "details": missing_vars
+                },
+                "database_warehouse": {
+                    "status": "ok" if db_ok else "failed",
+                    "details": db_msg
+                },
+                "ai_provider": {
+                    "status": "ok" if ai_ok else "failed",
+                    "details": ai_msg
+                }
+            }
+        }
+    )
 
 
 @app.websocket("/ws/live-updates")
